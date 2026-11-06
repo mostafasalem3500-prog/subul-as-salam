@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+# النسخة الاحتياطية تُولَّد أثناء النشر ولا تُرفع إلى المستودع
+data/ih/
+data/qe/
+data/he/
+data/sync-info.json

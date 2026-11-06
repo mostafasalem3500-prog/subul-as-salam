@@ -1,0 +1,13 @@
+{
+  "name": "سُبُل السلام — Subul as-Salam",
+  "short_name": "سُبُل",
+  "description": "منصة تعليم المسلم الجديد بالسواحيلية والكينيارواندية والإسبانية، من مصادر إسلام هاوس وموسوعة القرآن وموسوعة الأحاديث",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b4d3c",
+  "theme_color": "#0b4d3c",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

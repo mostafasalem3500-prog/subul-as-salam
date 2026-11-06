@@ -1,0 +1,49 @@
+# النشر على GitHub Pages مع مزامنة نسخة احتياطية من المصادر
+# يعمل عند كل push على main، وأسبوعيًّا، ويدويًّا من تبويب Actions
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 2 * * 5'   # كل جمعة
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'مزامنة كل سور القرآن لكل ترجمة'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: مزامنة المصادر (IslamHouse · QuranEnc · HadeethEnc)
+        run: node scripts/sync-data.mjs ${{ inputs.full && '--full' || '' }}
+        continue-on-error: true
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

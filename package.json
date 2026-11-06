@@ -1,0 +1,13 @@
+{
+  "name": "subul-as-salam",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "سُبُل السلام — منصة تعليم المسلم الجديد (GitHub Pages + Supabase)",
+  "scripts": {
+    "sync": "node scripts/sync-data.mjs",
+    "sync:full": "node scripts/sync-data.mjs --full",
+    "serve": "python3 -m http.server 8080"
+  },
+  "license": "MIT"
+}
