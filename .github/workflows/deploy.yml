@@ -1,12 +1,9 @@
-# النشر على GitHub Pages مع مزامنة نسخة احتياطية من المصادر
-# يعمل عند كل push على main، وأسبوعيًّا، ويدويًّا من تبويب Actions
-name: Deploy to GitHub Pages
+# (اختياري) نسخة ثانية على GitHub Pages مع مزامنة نسخة احتياطية من المصادر.
+# الموقع الأساسي على Hostinger. لتفعيل هذه النسخة: Settings → Pages → Source: GitHub Actions،
+# ثم شغّلها يدويًّا من تبويب Actions (أو أضف push/schedule هنا).
+name: Deploy to GitHub Pages (optional)
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '17 2 * * 5'   # كل جمعة
   workflow_dispatch:
     inputs:
       full:
