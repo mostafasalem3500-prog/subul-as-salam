@@ -16,7 +16,7 @@ const errMsg = (e) => {
 };
 
 export function login(app) {
-  if (S.me) { location.hash = ['supervisor', 'admin'].includes(S.me.role) ? '#/supervisor' : '#/me'; return; }
+  if (S.me) { location.hash = ['supervisor', 'admin'].includes(S.me.role) ? `#/${S.lang}/supervisor` : `#/${S.me.lang || S.lang}/me/today`; return; }
   app.innerHTML = `${pageHead(t('login'))}
   <div class="wrap" style="max-width:520px;padding-top:24px">
     <form class="card stack" id="f">
@@ -48,7 +48,7 @@ export function login(app) {
 }
 
 export function signup(app) {
-  if (S.me) { location.hash = ['supervisor', 'admin'].includes(S.me.role) ? '#/supervisor' : '#/me'; return; }
+  if (S.me) { location.hash = ['supervisor', 'admin'].includes(S.me.role) ? `#/${S.lang}/supervisor` : `#/${S.me.lang || S.lang}/me/today`; return; }
   app.innerHTML = `${pageHead(t('signup'))}
   <div class="wrap" style="max-width:560px;padding-top:24px">
     <form class="card stack" id="f">
@@ -60,7 +60,8 @@ export function signup(app) {
       <div class="field"><label for="nm">${t('name')}</label><input id="nm" required autocomplete="name"></div>
       <div class="field"><label for="em">${t('email')}</label><input id="em" type="email" required autocomplete="email" inputmode="email"></div>
       <div class="field"><label for="pw">${t('password')}</label><input id="pw" type="password" ${S.db.mode === 'local' ? '' : 'required'} minlength="6" autocomplete="new-password"></div>
-      <div class="field"><label for="lg">${t('yourLang')}</label><select id="lg">${langOptions(S.lang)}</select></div>
+      <div class="field"><label>${t('yourLang')}</label><input id="lg" type="hidden" value="${S.lang}">
+        <p class="chip gold" style="font-size:.95rem">${esc(CONFIG.languages[S.lang].ar)} · ${esc(CONFIG.languages[S.lang].name)}</p></div>
       <div class="field"><label for="ct">${t('country')}</label><input id="ct" autocomplete="country-name"></div>
       ${localStorage.getItem('subul-join') ? `<p class="notice small">🔗 ${t('join')}: <b dir="ltr">${esc(localStorage.getItem('subul-join'))}</b></p>` : ''}
       <p class="small muted hidden" id="sup-note" lang="ar">طلب الإشراف يُراجَع من إدارة المنصة قبل تفعيله. ستدخل الآن طالبًا، وتظهر لوحة المشرف بعد الاعتماد.</p>
@@ -87,12 +88,13 @@ export async function profile(app) {
   const me = S.me; if (!me) return needLogin();
   const sup = ['supervisor', 'admin'].includes(me.role);
   const links = await S.db.links().catch(() => []);
-  const invite = me.supervisor_code ? `${location.origin}${location.pathname}#/join/${me.supervisor_code}` : '';
+  const invite = me.supervisor_code ? `${location.origin}${location.pathname}#/${S.lang}/join/${me.supervisor_code}` : '';
   app.innerHTML = `${pageHead('👤 ' + esc(me.full_name || me.email), `<span dir="ltr">${esc(me.email)}</span> · ${esc(me.role)}`)}
   <div class="wrap grid-2" style="padding-top:24px">
     <form class="card stack" id="pf">
       <div class="field"><label for="nm">${t('name')}</label><input id="nm" value="${esc(me.full_name || '')}"></div>
-      <div class="field"><label for="lg">${t('yourLang')}</label><select id="lg">${langOptions(me.lang)}</select></div>
+      ${sup ? `<div class="field"><label for="lg">${t('yourLang')}</label><select id="lg">${langOptions(me.lang)}</select></div>`
+            : `<input id="lg" type="hidden" value="${esc(me.lang)}"><p class="chip gold">${t('yourLang')}: ${esc(CONFIG.languages[me.lang]?.name || me.lang)}</p>`}
       <div class="field"><label for="ct">${t('country')}</label><input id="ct" value="${esc(me.country || '')}"></div>
       ${!sup ? `<div class="field"><label for="sd" lang="ar">تاريخ النطق بالشهادة (اختياري)</label><input id="sd" type="date" value="${esc(me.shahada_date || '')}"></div>` : ''}
       <button class="btn primary">${t('save')}</button>
@@ -115,7 +117,7 @@ export async function profile(app) {
     e.preventDefault();
     const patch = { full_name: app.querySelector('#nm').value.trim(), lang: app.querySelector('#lg').value, country: app.querySelector('#ct').value.trim() };
     if (!sup) patch.shahada_date = app.querySelector('#sd').value || null;
-    try { await S.db.updateMe(patch); S.lang = patch.lang; localStorage.removeItem('subul-ui'); applyUi(); toast('✓'); } catch (er) { toast(errMsg(er)); }
+    try { await S.db.updateMe(patch); toast('✓'); } catch (er) { toast(errMsg(er)); }
   };
   app.querySelector('#cp')?.addEventListener('click', () => { navigator.clipboard?.writeText(invite); app.querySelector('#inv').select(); toast(t('copied')); });
   if (!sup) wireLinkBox(app, () => profile(app));
@@ -131,7 +133,7 @@ export async function join(app, code) {
     app.innerHTML = `<div class="wrap" style="max-width:560px;padding-top:30px"><div class="card stack center">
       <h2>🔗 ${t('join')}</h2>
       <p>${r === 'pending' ? t('sentRequest') : r === 'active' ? t('linked') + ' ✓' : r === 'self' ? 'هذا الرابط للطلاب.' : 'الرمز غير صحيح'}</p>
-      <a class="btn primary" href="#/me">${t('myPage')}</a></div></div>`;
+      <a class="btn primary" href="#/me/today">${t('myPage')}</a></div></div>`;
     return;
   }
   app.innerHTML = `<div class="wrap" style="max-width:560px;padding-top:30px"><div class="card stack center">

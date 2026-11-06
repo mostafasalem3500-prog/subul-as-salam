@@ -135,6 +135,10 @@ async function supabaseBackend() {
     async questions(stage_id, lang) { return ok(await sb.from('quiz_questions').select('*').eq('stage_id', stage_id).eq('lang', lang)); },
     async addQuestion(q) { ok(await sb.from('quiz_questions').insert({ ...q, created_by: uid() })); },
     async deleteQuestion(id) { ok(await sb.from('quiz_questions').delete().eq('id', id)); },
+    async mediaLinks(lang) { return ok(await sb.from('media_links').select('*').eq('lang', lang).order('created_at', { ascending: false })); },
+    async addMediaLink(m) { ok(await sb.from('media_links').insert({ ...m, author_id: uid(), status: 'draft' })); },
+    async approveMediaLink(id, okk) { ok(await sb.rpc('approve_media_link', { p_id: id, p_ok: okk })); },
+    async deleteMediaLink(id) { ok(await sb.from('media_links').delete().eq('id', id)); },
     async dawahMessages(lang) { return ok(await sb.from('dawah_messages').select('*').eq('lang', lang).order('created_at', { ascending: false })); },
     async addDawahMessage(m) { ok(await sb.from('dawah_messages').insert({ ...m, author_id: uid(), status: 'draft' })); },
     async approveDawahMessage(id, okk) { ok(await sb.rpc('approve_dawah_message', { p_id: id, p_ok: okk })); },
@@ -166,7 +170,7 @@ function localBackend() {
   const pub = (u) => u && ({ id: u.id, full_name: u.full_name, email: u.email, lang: u.lang, country: u.country, role: u.role, supervisor_code: u.supervisor_code });
 
   function overview(u) {
-    const pr = db.progress.filter((p) => p.student_id === u.id);
+    const pr = db.progress.filter((p) => p.student_id === u.id && !['prayer', 'daily'].includes(p.kind));
     return { ...u, done_items: pr.length, last_activity: pr.map((p) => p.completed_at).sort().pop() || null };
   }
 
@@ -290,6 +294,10 @@ function localBackend() {
     async questions(stage_id, lang) { return db.questions.filter((q) => q.stage_id === stage_id && q.lang === lang); },
     async addQuestion(q) { db.questions.push({ id: rid(), ...q, created_by: uid() }); save(); },
     async deleteQuestion(id) { db.questions = db.questions.filter((q) => q.id !== id); save(); },
+    async mediaLinks(lang) { return (db.media || []).filter((m) => m.lang === lang && (m.status === 'approved' || m.author_id === uid() || me?.role === 'admin')); },
+    async addMediaLink(m) { (db.media ||= []).unshift({ id: nid(), ...m, author_id: uid(), status: me?.role === 'admin' ? 'approved' : 'draft', created_at: now() }); save(); },
+    async approveMediaLink(id, okk) { if (okk) db.media.find((m) => m.id === id).status = 'approved'; else db.media = db.media.filter((m) => m.id !== id); save(); },
+    async deleteMediaLink(id) { db.media = (db.media || []).filter((m) => m.id !== id); save(); },
     async dawahMessages(lang) { return db.dmsg.filter((m) => m.lang === lang && (m.status === 'approved' || m.author_id === uid() || me?.role === 'admin')); },
     async addDawahMessage(m) { db.dmsg.unshift({ id: nid(), ...m, author_id: uid(), status: me?.role === 'admin' ? 'approved' : 'draft', created_at: now() }); save(); },
     async approveDawahMessage(id, okk) { if (okk) db.dmsg.find((m) => m.id === id).status = 'approved'; else db.dmsg = db.dmsg.filter((m) => m.id !== id); save(); },

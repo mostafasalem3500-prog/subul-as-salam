@@ -19,17 +19,17 @@ export const CONFIG = {
   // ---- لغات التعلّم ----
   // enabled=false: تظهر «قريبًا» ولا تُفعّل
   languages: {
+    es: { name: 'Español', ar: 'الإسبانية', dir: 'ltr', enabled: true,
+          quran: ['spanish_garcia', 'spanish_montada_latin', 'spanish_montada_eu'], hadeeth: 'es', ih: 'es', tts: 'es',
+          sister: 'https://web-production-d19218.up.railway.app' },
+    en: { name: 'English', ar: 'الإنجليزية', dir: 'ltr', enabled: true,
+          quran: ['english_saheeh', 'english_rwwad', 'english_hilali_khan'], hadeeth: 'en', ih: 'en', tts: 'en' },
     sw: { name: 'Kiswahili', ar: 'السواحيلية', dir: 'ltr', enabled: true,
           quran: ['swahili_rwwad', 'swahili_barawani'], hadeeth: 'sw', ih: 'sw', tts: 'sw' },
     rw: { name: 'Ikinyarwanda', ar: 'الكينيارواندية', dir: 'ltr', enabled: true,
           quran: ['kinyarwanda_assoc'], hadeeth: 'rw', ih: 'rw', tts: 'rw' },
-    es: { name: 'Español', ar: 'الإسبانية', dir: 'ltr', enabled: true,
-          quran: ['spanish_garcia', 'spanish_montada_latin', 'spanish_montada_eu'], hadeeth: 'es', ih: 'es', tts: 'es',
-          sister: 'https://web-production-d19218.up.railway.app' },
-    en: { name: 'English', ar: 'الإنجليزية', dir: 'ltr', enabled: false,
-          quran: ['english_saheeh', 'english_rwwad'], hadeeth: 'en', ih: 'en', tts: 'en' },
   },
-  defaultLang: 'sw',
+  defaultLang: 'es',
 
   // ---- مصادر المحتوى ----
   // وسيط المصادر على استضافة PHP (Hostinger). على GitHub Pages يُتجاهل تلقائيًّا.

@@ -1,90 +1,88 @@
 // =====================================================================
-//  صفحة اللغة الأساسية (#/sw · #/rw · #/es) — يدخلها الطالب والمشرف والزائر
-//  تجمع كل ما في المنصة لهذه اللغة: المنهج، القرآن، الحديث، المكتبة،
-//  ركن الداعية، وبنك الرسائل الدعوية الذي يكتبه فريق اللغة ويعتمده المدير.
+//  الصفحة الرئيسية لقسم اللغة (#/es · #/en · #/sw · #/rw)
+//  الشعار، والآية، وثلاثة أبواب: الصفحة التعليمية · الدخول · الاشتراك
+//  ثم ما يجده الطالب وما يجده المشرف، وإحصاءات حيّة، وخريطة الرحلة.
 // =====================================================================
 import { CONFIG } from '../config.js';
 import { IH, QE } from '../api.js';
-import { S, esc, toast, reveal, applyUi, isSup, linkify } from '../core.js';
-import { t, tIn } from '../i18n.js';
-import { DAWAH_WORDS } from '../dawah-words.js';
+import { S, esc, toast, reveal, isSup, linkify, href } from '../core.js';
+import { t } from '../i18n.js';
 import { journeyHTML, drawJourney, ayahMark, refsSlot, fillRefs } from './components.js';
-import { render } from '../app.js';
 
-const tile = (href, ic, title, sub, ext = false) => `<a class="card lift item" href="${href}"${ext ? ' target="_blank" rel="noopener"' : ''}>
-  <span class="ic">${ic}</span><span style="min-width:0"><h3>${title}</h3><span class="desc">${sub}</span></span></a>`;
+export function countUp(root) {
+  root.querySelectorAll('[data-to]').forEach((el) => {
+    const to = +el.dataset.to; if (!to) return;
+    const t0 = performance.now(), dur = 1400;
+    const step = (now) => { const p = Math.min(1, (now - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))).toLocaleString('en'); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
 
-export default async function hub(app, code) {
-  const L = CONFIG.languages[code];
-  if (!L) return '404';
-  if (!L.enabled) return `<div class="wrap" style="padding-top:30px"><div class="card center"><h2>${esc(L.name)}</h2><p>${t('soon')}</p></div></div>`;
-  const student = S.me?.role === 'student';
-  if (!student && S.lang !== code) { localStorage.setItem('subul-lang', code); applyUi(); return render(); }
-  const mismatch = student && S.me.lang !== code;
-  const words = DAWAH_WORDS[code]?.cards.length || 0;
+export default async function langHome(app) {
+  const code = S.routeLang, L = CONFIG.languages[code];
+  const me = S.me, student = me?.role === 'student', sup = isSup();
+  const feat = (ic, title, sub) => `<div class="feature reveal"><span class="fi">${ic}</span><span><b>${title}</b><br><span class="small muted">${sub}</span></span></div>`;
 
   app.innerHTML = `
-  <section class="hero pattern"><div class="wrap">
-    <div>
-      <span class="chip gold">${t('langHub')} · ${esc(L.ar)}</span>
-      <h1 style="margin-top:10px;font-family:var(--lat)">${esc(L.name)}</h1>
-      <p class="lead" lang="${code}">${esc(tIn(code, 'tagline'))}</p>
-      <div class="verse" id="hv"><div class="skeleton" style="height:56px;opacity:.3"></div></div>
-      <div class="cta">
-        ${!S.me ? `<a class="btn gold" href="#/signup">${t('start')}</a><a class="btn ghost" style="color:#fff;border-color:rgb(255 255 255 / .4)" href="#/login">${t('login')}</a>`
-          : student ? `<a class="btn gold" href="#/me">${t('myPage')} ←</a>`
-          : `<a class="btn gold" href="#/supervisor">${t('supervisor')} ←</a>`}
+  <section class="hero pattern">
+    <svg class="bg-star" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#e0bd5f" stroke-width=".6"><rect x="20" y="20" width="60" height="60"/><rect x="20" y="20" width="60" height="60" transform="rotate(45 50 50)"/><circle cx="50" cy="50" r="18"/><circle cx="50" cy="50" r="42"/></g></svg>
+    <div class="wrap" style="grid-template-columns:1fr">
+      <div>
+        <div class="row"><img src="assets/img/logo.svg" alt="" width="64" height="64" style="border-radius:16px;box-shadow:0 10px 30px rgb(0 0 0 / .3)">
+          <span class="chip gold">${esc(L.ar)} · <span lang="${code}">${esc(L.name)}</span></span></div>
+        <h1 style="margin-top:14px">${esc(CONFIG.brand.nameAr)} <span class="latin" style="display:inline;font-size:.45em">· ${esc(L.name)}</span></h1>
+        <p class="lead">${t('tagline')}</p>
+        <div class="verse" id="hv" style="max-width:860px"><div class="skeleton" style="height:56px;opacity:.3"></div></div>
+        <div class="doors">
+          <a class="door" href="${href('learn')}"><span class="di">📖</span><span><b>${t('learnCenter')}</b><small>${t('openToAll')}</small></span></a>
+          ${me
+            ? `<a class="door" href="${student ? href('me/today') : sup ? href('supervisor') : href('profile')}"><span class="di">${student ? '🌱' : '🎓'}</span><span><b>${student ? t('studentArea') : t('supArea')}</b><small>${esc(me.full_name || me.email)}</small></span></a>
+               <a class="door" href="${href('profile')}"><span class="di">👤</span><span><b>${esc(me.full_name || me.email.split('@')[0])}</b><small>${t('logout')} · ${t('save')}</small></span></a>`
+            : `<a class="door" href="${href('login')}"><span class="di">🔐</span><span><b>${t('login')}</b><small>${t('student')} · ${t('supervisorRole')}</small></span></a>
+               <a class="door" href="${href('signup')}"><span class="di">✨</span><span><b>${t('signup')}</b><small>${t('start')}</small></span></a>`}
+        </div>
       </div>
     </div>
-    <div class="lang-cards">
-      ${Object.entries(CONFIG.languages).map(([c, X]) => `<a class="lang-card" href="#/${c}" aria-disabled="${!X.enabled}" ${c === code ? 'style="outline:2px solid var(--gold-2)"' : ''}>
-        <span class="code">${c}</span><span><b>${esc(X.name)}</b><span class="meta" lang="ar">${esc(X.ar)}${X.enabled ? '' : ' · ' + t('soon')}</span></span></a>`).join('')}
+  </section>
+
+  <div class="wrap stack" style="padding-top:26px">
+    <div class="stats reveal">
+      <div class="stat"><b data-to="0" id="st-ih">…</b><span>IslamHouse · ${esc(L.name)}</span></div>
+      <div class="stat"><b data-to="0" id="st-vid">…</b><span>${t('videos')}</span></div>
+      <div class="stat"><b data-to="12">12</b><span>${t('stages')}</span></div>
+      <div class="stat"><b data-to="6236">6236</b><span>${t('quran')}</span></div>
     </div>
-  </div></section>
 
-  <div class="wrap stack" style="padding-top:22px">
-    ${mismatch ? `<div class="notice row between"><span lang="ar">لغة تعلّمك الحالية: <b>${esc(CONFIG.languages[S.me.lang]?.name || S.me.lang)}</b>.</span>
-       <button class="btn sm primary" id="sw-lang">${t('switchLang')}: ${esc(L.name)}</button></div>` : ''}
+    <div class="grid-2" style="margin-top:10px">
+      <section class="feature-col">
+        <div class="sec-head"><div><span class="kicker">${t('studentArea')}</span><h2>🌱 ${t('forStudents')}</h2></div></div>
+        ${feat('☀️', t('dailyLesson'), `${t('read')} · ${t('listen')} · ${t('memorize')} · ${t('hadithDay')}`)}
+        ${feat('🧭', t('curriculum'), `12 ${t('stages')} · ${t('quiz')}`)}
+        ${feat('💧', t('prayerWudu'), `${t('wudu')} · ${t('prayerSteps')} · ${t('prayerTracker')}`)}
+        ${feat('🎬', t('videos'), 'IslamHouse.com')}
+        ${feat('🔁', t('reviews'), `${t('weekly')} · ${t('monthly')}`)}
+        ${feat('💬', t('chat'), `${t('tests')} · ${t('follow')}`)}
+      </section>
+      <section class="feature-col">
+        <div class="sec-head"><div><span class="kicker">${t('supArea')}</span><h2>🎓 ${t('forSupervisors')}</h2></div></div>
+        ${feat('👥', t('students'), `${t('requests')} · ${t('follow')} · ${t('evaluate')}`)}
+        ${feat('🃏', t('cards'), `${t('makeCard')} · ${t('words')}`)}
+        ${feat('🧭', t('guide'), 'رفيق الداعية · 20 + 12 + 25')}
+        ${feat('🗣️', t('langLearn'), `${esc(L.name)} · ${t('explorer')}`)}
+        ${feat('📚', t('material'), `${t('booksGuide')} · ${t('library')} · ${t('videos')}`)}
+        ${feat('📝', t('tests'), `${t('questions')} · ${t('chat')}`)}
+      </section>
+    </div>
 
-    <section class="stack reveal"><div class="sec-head"><div><span class="kicker">${t('forStudents')}</span><h2>🌱 ${t('curriculum')} · ${t('quran')} · ${t('hadith')}</h2></div></div>
-      <div class="grid">
-        ${tile(S.me && student ? '#/me' : '#/signup', '🧭', t('myPage'), `${t('curriculum')} · ${t('follow')} · ${t('chat')} · ${t('tests')}`)}
-        ${tile('#/quran', '📖', t('quran'), `QuranEnc · ${L.quran.map(esc).join(' · ')}`)}
-        ${tile('#/hadith', '🌿', t('hadith'), 'HadeethEnc.com')}
-        ${tile('#/library', '📚', t('library'), `IslamHouse · <span data-ihc>…</span>`)}
-      </div>
-    </section>
-
-    <section class="stack reveal"><div class="sec-head"><div><span class="kicker">${t('forSupervisors')}</span><h2>🤝 ${t('dawah')}</h2></div></div>
-      <div class="grid">
-        ${words ? tile('#/dawah/words', '🗝️', t('words'), `${words} · ${t('inContext')}`) : ''}
-        ${tile('#/dawah/train', '🎓', 'دروس الداعية', '20 درسًا تدريبيًّا — رفيق الداعية')}
-        ${tile('#/dawah/course', '🌱', 'اكتشف الإسلام', '12 لقاءً قبل الشهادة')}
-        ${tile('#/dawah/guide', '🧭', 'دليل الداعية', 'الإخلاص، آداب الحوار، الإحالة')}
-        ${code === 'es' ? tile('#/dawah/msg', '💬', '1000 mensajes', 'رسائل رفيق الداعية الجاهزة') + tile(L.sister, '🇪🇸', 'رفيق الداعية — الموقع الأساسي', esc(L.sister.replace('https://', '')), true) : ''}
-        ${isSup() ? tile('#/supervisor', '🎓', t('supervisor'), `${t('students')} · ${t('requests')}`) : ''}
-      </div>
-    </section>
+    <section class="stack reveal"><div class="sec-head"><div><span class="kicker">${t('curriculum')}</span><h2>${t('stages')}</h2></div>
+      <a class="btn" href="${href('learn')}">${t('learnCenter')} ←</a></div>${journeyHTML(null)}</section>
 
     <section class="stack reveal" id="bank"><div class="sec-head"><div><span class="kicker">${esc(L.name)}</span><h2>💌 ${t('msgBank')}</h2>
-      <p class="muted small" lang="ar">رسائل قصيرة يكتبها فريق هذه اللغة من المتحدثين الأصليين، ويذكر معها مراجعها، ثم يعتمدها المدير قبل ظهورها للجميع. لا ترجمة آلية.</p></div></div>
-      <div id="bank-list" class="stack"><div class="skeleton" style="height:60px"></div></div>
-      ${isSup() ? `<details class="card"><summary><b>➕ ${t('addMessage')}</b></summary>
-        <form class="stack" id="bf" style="margin-top:10px">
-          <input id="bt" required placeholder="العنوان / Title" dir="auto">
-          <textarea id="bb" required placeholder="${esc(L.name)}…" lang="${code}" dir="${L.dir}"></textarea>
-          <textarea id="ba" placeholder="المعنى بالعربية (للمراجعة)" lang="ar" dir="rtl"></textarea>
-          <div class="row"><input id="bq" dir="ltr" placeholder="Quran: 2:255, 112:1-4" style="flex:1"><input id="bh" dir="ltr" placeholder="HadeethEnc: 5795, 66512" style="flex:1"></div>
-          <button class="btn primary">${t('save')} (${t('draft')})</button></form></details>` : ''}
-    </section>
-
-    <section class="stack"><h2>${t('stages')}</h2>${journeyHTML(null)}</section>
+      <p class="muted small" lang="ar">رسائل قصيرة يكتبها فريق هذه اللغة من المتحدثين الأصليين مع مراجعها، ويعتمدها المدير قبل ظهورها. لا ترجمة آلية.</p></div></div>
+      <div id="bank-box"></div></section>
   </div>`;
   reveal(app); drawJourney(app);
 
-  app.querySelector('#sw-lang')?.addEventListener('click', async () => { await S.db.updateMe({ lang: code }); localStorage.removeItem('subul-ui'); applyUi(); toast('✓'); render(); });
-
-  // الآية من QuranEnc بلغة الصفحة
   (async () => {
     const el = app.querySelector('#hv');
     try {
@@ -94,13 +92,31 @@ export default async function hub(app, code) {
         <div class="tr" dir="${L.dir}" lang="${code}" translate="no">${esc(r.translation)}</div><div class="ref">المائدة ${sura}:${aya} · QuranEnc — ${esc(L.quran[0])}</div>`;
     } catch { el.remove(); }
   })();
-  IH.siteContent(L.ih).then((sc) => { const n = (sc.data || sc).find?.((b) => b.block_name === 'showall')?.items_count; app.querySelectorAll('[data-ihc]').forEach((e) => e.textContent = n || ''); }).catch(() => {});
+  IH.siteContent(L.ih).then((sc) => {
+    const blocks = sc.data || sc;
+    const set = (id, n) => { const e = app.querySelector(id); if (e && n) { e.dataset.to = n; } };
+    set('#st-ih', blocks.find?.((b) => b.block_name === 'showall')?.items_count);
+    set('#st-vid', blocks.find?.((b) => b.block_name === 'videos')?.items_count);
+    countUp(app);
+  }).catch(() => {});
+  messageBank(app.querySelector('#bank-box'), code);
+}
 
-  // بنك الرسائل
-  const drawBank = async () => {
-    const box = app.querySelector('#bank-list');
+// بنك الرسائل الدعوية لكل لغة (يُستعمل هنا وفي صفحة المشرف)
+export async function messageBank(box, code) {
+  const L = CONFIG.languages[code];
+  box.innerHTML = `<div id="bank-list" class="stack"><div class="skeleton" style="height:60px"></div></div>
+    ${isSup() ? `<details class="card"><summary><b>➕ ${t('addMessage')}</b></summary>
+      <form class="stack" id="bf" style="margin-top:10px">
+        <input id="bt" required placeholder="العنوان / Title" dir="auto">
+        <textarea id="bb" required placeholder="${esc(L.name)}…" lang="${code}" dir="${L.dir}"></textarea>
+        <textarea id="ba" placeholder="المعنى بالعربية (للمراجعة)" lang="ar" dir="rtl"></textarea>
+        <div class="row"><input id="bq" dir="ltr" placeholder="Quran: 2:255, 112:1-4" style="flex:1"><input id="bh" dir="ltr" placeholder="HadeethEnc: 5795, 66512" style="flex:1"></div>
+        <button class="btn primary">${t('save')} (${t('draft')})</button></form></details>` : ''}`;
+  const draw = async () => {
     const list = await S.db.dawahMessages(code).catch(() => []);
-    box.innerHTML = list.length ? list.map((m) => `<details class="card"><summary class="row between"><b dir="auto">${esc(m.title)}</b>
+    const lb = box.querySelector('#bank-list');
+    lb.innerHTML = list.length ? list.map((m) => `<details class="card"><summary class="row between"><b dir="auto">${esc(m.title)}</b>
         ${m.status === 'draft' ? `<span class="chip gold">${t('draft')}</span>` : ''}</summary>
       <div class="stack"><p lang="${code}" dir="${L.dir}" style="font-size:1.05rem">${linkify(m.body)}</p>${m.ar ? `<p class="small muted" lang="ar" dir="rtl">${esc(m.ar)}</p>` : ''}
         <div class="row"><button class="btn sm" data-cp="${m.id}">📋 ${t('copy')}</button>
@@ -109,20 +125,19 @@ export default async function hub(app, code) {
           ${S.me && (m.author_id === S.me.id || S.me.role === 'admin') ? `<button class="btn sm ghost" data-del="${m.id}">🗑</button>` : ''}</div>
         ${refsSlot(m.q || [], m.h || [])}</div></details>`).join('')
       : `<p class="card muted" lang="ar">لا رسائل معتمدة بعد بهذه اللغة.${isSup() ? ' أضف أول رسالة من النموذج أدناه.' : ''}</p>`;
-    box.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', () => d.open && fillRefs(d)));
-    box.querySelectorAll('[data-cp]').forEach((b) => b.onclick = () => { navigator.clipboard?.writeText(list.find((m) => String(m.id) === b.dataset.cp).body); toast(t('copied')); });
-    box.querySelectorAll('[data-ok],[data-no]').forEach((b) => b.onclick = async () => { await S.db.approveDawahMessage(+(b.dataset.ok || b.dataset.no), !!b.dataset.ok); drawBank(); });
-    box.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => { await S.db.deleteDawahMessage(+b.dataset.del); drawBank(); });
+    lb.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', () => d.open && fillRefs(d)));
+    lb.querySelectorAll('[data-cp]').forEach((b) => b.onclick = () => { navigator.clipboard?.writeText(list.find((m) => String(m.id) === b.dataset.cp).body); toast(t('copied')); });
+    lb.querySelectorAll('[data-ok],[data-no]').forEach((b) => b.onclick = async () => { await S.db.approveDawahMessage(+(b.dataset.ok || b.dataset.no), !!b.dataset.ok); draw(); });
+    lb.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => { await S.db.deleteDawahMessage(+b.dataset.del); draw(); });
   };
-  drawBank();
-  app.querySelector('#bf')?.addEventListener('submit', async (e) => {
+  draw();
+  box.querySelector('#bf')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const v = (id) => app.querySelector(id).value.trim();
+    const v = (id) => box.querySelector(id).value.trim();
     const split = (x) => x.split(/[,\s،]+/).map((y) => y.trim()).filter(Boolean);
     try {
       await S.db.addDawahMessage({ lang: code, title: v('#bt'), body: v('#bb'), ar: v('#ba') || null, q: split(v('#bq')), h: split(v('#bh')) });
-      e.target.reset(); toast('✓ ' + t('draft')); drawBank();
+      e.target.reset(); toast('✓ ' + t('draft')); draw();
     } catch (er) { toast(er.message); }
   });
 }
-

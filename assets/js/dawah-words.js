@@ -9,6 +9,8 @@
 //  تحقّق بتاريخ 2026-11-06 من:
 //    swahili_rwwad (v1.0.5) — مركز رواد الترجمة
 //    kinyarwanda_assoc (v1.0.5) — جمعية مسلمي رواندا
+//    english_saheeh (v1.1.2) — مركز نور الدولي
+//    spanish_garcia — عيسى غارسيا
 // =====================================================================
 
 export const DAWAH_WORDS = {
@@ -51,5 +53,46 @@ export const DAWAH_WORDS = {
     { ar: 'الحكمة',            word: 'ubushishozi',         ref: [16, 125] },
     { ar: 'الموعظة الحسنة',     word: 'inyigisho nziza',     ref: [16, 125] },
   ]},
-  es: { key: 'spanish_garcia', cards: [] },
+  en: { key: 'english_saheeh', cards: [
+    { ar: 'الله',              word: 'Allāh',                    ref: [1, 1] },
+    { ar: 'الرحمن',            word: 'the Entirely Merciful',    ref: [1, 1] },
+    { ar: 'الرحيم',            word: 'the Especially Merciful',  ref: [1, 1] },
+    { ar: 'الحمد',             word: 'praise',                   ref: [1, 2] },
+    { ar: 'الرب',              word: 'Lord',                     ref: [1, 2] },
+    { ar: 'العالمين',          word: 'the worlds',               ref: [1, 2] },
+    { ar: 'يوم الدين',         word: 'Day of Recompense',        ref: [1, 4] },
+    { ar: 'نعبد',              word: 'we worship',               ref: [1, 5] },
+    { ar: 'نستعين',            word: 'we ask for help',          ref: [1, 5] },
+    { ar: 'اهدنا',             word: 'Guide us',                 ref: [1, 6] },
+    { ar: 'الصراط المستقيم',    word: 'the straight path',        ref: [1, 6] },
+    { ar: 'قل',                word: 'Say',                      ref: [112, 1] },
+    { ar: 'أحد',               word: 'One',                      ref: [112, 1] },
+    { ar: 'الصمد',             word: 'the Eternal Refuge',       ref: [112, 2] },
+    { ar: 'الصلاة',            word: 'prayer',                   ref: [2, 43] },
+    { ar: 'الزكاة',            word: 'zakāh',                    ref: [2, 43] },
+    { ar: 'ادعُ (الدعوة)',      word: 'Invite',                   ref: [16, 125] },
+    { ar: 'الحكمة',            word: 'wisdom',                   ref: [16, 125] },
+    { ar: 'الموعظة الحسنة',     word: 'good instruction',         ref: [16, 125] },
+  ]},
+  es: { key: 'spanish_garcia', cards: [
+    { ar: 'الله',              word: 'Al-lah',                   ref: [112, 1] },
+    { ar: 'الرحمن',            word: 'el Compasivo',             ref: [1, 3] },
+    { ar: 'الرحيم',            word: 'el Misericordioso',        ref: [1, 3] },
+    { ar: 'الحمد',             word: 'alabanzas',                ref: [1, 2] },
+    { ar: 'الرب',              word: 'Señor',                    ref: [1, 2] },
+    { ar: 'العالمين',          word: 'todo cuanto existe',       ref: [1, 2] },
+    { ar: 'يوم الدين',         word: 'Día del Juicio Final',     ref: [1, 4] },
+    { ar: 'نعبد',              word: 'te adoramos',              ref: [1, 5] },
+    { ar: 'نستعين',            word: 'imploramos ayuda',         ref: [1, 5] },
+    { ar: 'اهدنا',             word: 'Guíanos',                  ref: [1, 6] },
+    { ar: 'الصراط المستقيم',    word: 'el camino recto',          ref: [1, 6] },
+    { ar: 'قل',                word: 'Di',                       ref: [112, 1] },
+    { ar: 'أحد',               word: 'Uno',                      ref: [112, 1] },
+    { ar: 'الصمد',             word: 'el Absoluto',              ref: [112, 2] },
+    { ar: 'الصلاة',            word: 'la oración',               ref: [2, 43] },
+    { ar: 'الزكاة',            word: 'el zakat',                 ref: [2, 43] },
+    { ar: 'ادعُ (الدعوة)',      word: 'Convoca',                  ref: [16, 125] },
+    { ar: 'الحكمة',            word: 'sabiduría',                ref: [16, 125] },
+    { ar: 'الموعظة الحسنة',     word: 'bellas palabras',          ref: [16, 125] },
+  ]},
 };

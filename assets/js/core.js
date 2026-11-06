@@ -6,10 +6,10 @@ import { setUiLang, uiDir, getUiLang } from './i18n.js';
 export const S = {
   db: null,
   me: null,
-  // لغة العرض: الطالب يرى لغة تعلّمه دائمًا؛ المشرف والزائر يتنقلان بين صفحات اللغات بحرية
+  routeLang: null,   // لغة القسم الحالي من الرابط #/{lang}/...
+  // لغة المحتوى: لغة القسم المفتوح، ثم لغة الطالب، ثم آخر لغة زارها
   get lang() {
-    const v = localStorage.getItem('subul-lang');
-    const L = this.me?.role === 'student' ? this.me.lang : (v || this.me?.lang);
+    const L = this.routeLang || (this.me?.role === 'student' ? this.me.lang : null) || localStorage.getItem('subul-lang') || this.me?.lang;
     return CONFIG.languages[L] ? L : CONFIG.defaultLang;
   },
   set lang(v) { localStorage.setItem('subul-lang', v); },
@@ -19,10 +19,19 @@ export const S = {
   set reciter(v) { localStorage.setItem('subul-reciter', v); },
 };
 
+// رابط داخل قسم اللغة الحالية
+export const href = (p = '') => `#/${S.lang}${p ? '/' + p.replace(/^\/+/, '') : ''}`;
+
+// لغة العرض: داخل قسم اللغة يختار المستخدم بين العربية ولغة القسم فقط
+export function uiPref(L = S.routeLang) {
+  if (!L) return 'ar';
+  const v = localStorage.getItem('subul-ui-' + L);
+  if (v === 'ar' || v === L) return v;
+  return ['supervisor', 'admin', 'supervisor_pending'].includes(S.me?.role) ? 'ar' : L;
+}
 export function applyUi(l) {
-  if (l) localStorage.setItem('subul-ui', l);
-  const want = localStorage.getItem('subul-ui') || (['supervisor', 'admin', 'supervisor_pending'].includes(S.me?.role) ? 'ar' : S.lang);
-  setUiLang(want);
+  if (l && S.routeLang) localStorage.setItem('subul-ui-' + S.routeLang, l);
+  setUiLang(uiPref());
   document.documentElement.lang = getUiLang();
   document.documentElement.dir = uiDir();
   document.body.dir = uiDir();

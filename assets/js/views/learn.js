@@ -1,10 +1,12 @@
 // نافذة الطالب: لوحة الرحلة، المحطة، المادة، الاختبار
 import { CONFIG } from '../config.js';
-import { IH, QE, HE, ihTypeIcon, attachmentKind } from '../api.js';
-import { S, esc, toast, confetti, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
+import { IH, HE, ihTypeIcon, attachmentKind, ytEmbed } from '../api.js';
+import { S, esc, toast, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
+import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
 import { STAGES, surahName, allStageSurahs } from '../curriculum.js';
 import { t, stageTitle, stageDescAr } from '../i18n.js';
-import { pageHead, needLogin, refsSlot, fillRefs, qLangDir, ayahMark } from './components.js';
+import { pageHead, needLogin, refsSlot, fillRefs, qLangDir } from './components.js';
+import { videoCard, wireVideos } from './extra.js';
 
 const L = () => CONFIG.languages[S.lang];
 const stageById = (id) => STAGES.find((s) => s.id === id);
@@ -38,6 +40,9 @@ export async function stage(app, id) {
       ${st.haramain?.[lang] ? `<a class="card lift item" href="${st.haramain[lang]}" target="_blank" rel="noopener"><span class="ic">🕋</span><span><h3>${t('haramain')}</h3><span class="desc">risala.prh.gov.sa</span></span></a>` : ''}
     </section>
 
+    ${(st.vid?.[lang] || []).length ? `<section class="stack"><h2>🎬 ${t('videos')}</h2>
+      <div class="grid">${st.vid[lang].map((v) => videoCard(v)).join('')}</div></section>` : ''}
+
     <section class="stack">
       <h2>🧠 ${t('memoSurahs')}</h2>
       <div class="grid">${st.quran.map((n) => {
@@ -65,6 +70,7 @@ export async function stage(app, id) {
     </div>
   </div>`;
 
+  wireVideos(app);
   // بطاقات مواد إسلام هاوس
   app.querySelectorAll('[data-ih]').forEach(async (a) => {
     try {
@@ -123,7 +129,8 @@ export async function item(app, id) {
     <div class="stack">${att.map((a) => {
       const k = attachmentKind(a), u = esc(a.url);
       if (k === 'audio') return `<div class="attach"><span>🎧 ${esc(a.description || '')} <span class="tiny muted">${esc(a.size || '')}</span></span><audio controls preload="none" src="${u}"></audio></div>`;
-      if (k === 'video') return `<div class="attach"><video controls preload="metadata" src="${u}"></video></div>`;
+      if (k === 'video') return `<div class="attach"><video controls preload="metadata" playsinline src="${u}"></video></div>`;
+      if (k === 'youtube') return `<div class="attach vid-card"><iframe src="${esc(ytEmbed(a.url))}" title="YouTube" loading="lazy" allowfullscreen allow="encrypted-media; picture-in-picture"></iframe></div>`;
       if (k === 'pdf') return `<div class="attach"><span>📄 ${esc(a.description || 'PDF')} <span class="tiny muted">${esc(a.size || '')}</span></span>
         <span class="row"><a class="btn sm primary" href="${u}" target="_blank" rel="noopener">${t('open')}</a><a class="btn sm" href="${u}" download>${t('download')}</a></span>
         ${matchMedia('(min-width: 900px)').matches ? `<iframe class="pdf-frame" src="${u}" title="PDF" loading="lazy"></iframe>` : ''}</div>`;
@@ -141,77 +148,22 @@ export async function item(app, id) {
   });
 }
 
-// ---------------------------------------------------------------- الاختبار الآلي
-const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-
+// ---------------------------------------------------------------- اختبار المحطة
 export async function quiz(app, id) {
   if (!S.me) return needLogin();
   const practice = S.me.role !== 'student';   // المشرف يجرّب الاختبار دون حفظ
-  const st = stageById(id), idx = STAGES.indexOf(st), lang = S.lang, key = S.qKey;
+  const st = stageById(id), idx = STAGES.indexOf(st);
   app.innerHTML = loading();
-  // مجموعة الآيات: سور هذه المحطة أولًا ثم ما قبلها (لتنويع الخيارات)
-  const own = (await Promise.all(st.quran.map((n) => QE.sura(key, n)))).flat();
-  const others = idx > 0 ? allStageSurahs(idx - 1) : STAGES[1].quran;   // المحطة الأولى: خيارات إضافية من سور المحطة الثانية
-  const prev = (await Promise.all(others.filter((n) => !st.quran.includes(n)).slice(-6).map((n) => QE.sura(key, n)))).flat();
-  const pool = [...own, ...prev].filter((r) => r.translation && r.arabic_text);
-  const N = Math.min(6, own.length + 2);
-  const targets = shuffle(own).concat(idx > 0 ? shuffle(prev) : []).slice(0, N);
-  const Qs = targets.map((r, i) => {
-    const distract = shuffle(pool.filter((x) => x !== r && x.translation !== r.translation)).slice(0, 3);
-    const opts = shuffle([r, ...distract]);
-    return { type: i % 2 ? 'ar' : 'tr', r, opts, ans: opts.indexOf(r) };
-  });
-  // أسئلة بنك الأسئلة (يكتبها فريق التعليم بلغة الطالب)
-  const bank = await S.db.questions(id, lang).catch(() => []);
-  shuffle(bank).slice(0, 4).forEach((q) => Qs.push({ type: 'bank', q }));
-
-  let i = 0, correct = 0; const details = [];
-  const step = () => {
-    if (i >= Qs.length) return finish();
-    const Q = Qs[i];
-    let prompt, options;
-    if (Q.type === 'tr') {
-      prompt = `<p class="muted small">${t('pickTranslation')}</p><div class="quran-ar" lang="ar" translate="no">${esc(Q.r.arabic_text)} ${ayahMark(Q.r.aya)}</div><p class="tiny muted">${esc(surahName(Q.r.sura))} ${Q.r.sura}:${Q.r.aya}</p>`;
-      options = Q.opts.map((o) => `<span dir="${qLangDir(lang)}" lang="${lang}" translate="no">${esc(o.translation)}</span>`);
-    } else if (Q.type === 'ar') {
-      prompt = `<p class="muted small">${t('pickAyah')}</p><p dir="${qLangDir(lang)}" lang="${lang}" translate="no" style="font-size:1.08rem"><b>${esc(Q.r.translation)}</b></p>`;
-      options = Q.opts.map((o) => `<span class="quran-ar" style="font-size:1.35rem;line-height:2" lang="ar" translate="no">${esc(o.arabic_text)}</span>`);
-    } else {
-      prompt = `<p dir="${qLangDir(lang)}" lang="${lang}" style="font-size:1.1rem"><b>${esc(Q.q.question)}</b></p>${Q.q.source ? `<p class="tiny muted">${esc(Q.q.source)}</p>` : ''}`;
-      options = (Q.q.options || []).map((o) => `<span dir="${qLangDir(lang)}" lang="${lang}">${esc(o)}</span>`);
-      Q.ans = Q.q.answer;
-    }
-    app.innerHTML = `${pageHead(`✅ ${t('quiz')}: ${esc(stageTitle(id))}`, `${i + 1} / ${Qs.length}`)}
-    <div class="wrap" style="max-width:760px;padding-top:20px">
-      <div class="qbar"><i style="width:${(i / Qs.length) * 100}%"></i></div>
-      <div class="card stack" style="margin-top:14px">${prompt}
-        <div>${options.map((o, k) => `<button class="quiz-opt" data-k="${k}">${o}</button>`).join('')}</div>
-        <p class="src">QuranEnc.com — ${esc(key)}</p>
-      </div></div>`;
-    app.querySelectorAll('.quiz-opt').forEach((b) => b.onclick = () => {
-      const k = +b.dataset.k, ok = k === Q.ans;
-      app.querySelectorAll('.quiz-opt').forEach((x) => { x.disabled = true; if (+x.dataset.k === Q.ans) x.classList.add('right'); });
-      if (!ok) b.classList.add('wrong'); else correct++;
-      details.push({ type: Q.type, ref: Q.r ? `${Q.r.sura}:${Q.r.aya}` : Q.q?.id, ok });
-      setTimeout(() => { i++; step(); }, ok ? 700 : 1600);
-    });
-  };
-  const finish = async () => {
-    const score = practice ? Math.round((correct / Qs.length) * 100) : await S.db.saveQuiz(id, correct, Qs.length, details);
+  const extras = idx > 0 ? allStageSurahs(idx - 1).slice(-6) : STAGES[1].quran;
+  const bank = await S.db.questions(id, S.lang).catch(() => []);
+  const Qs = await buildQuestions({ targets: st.quran, extras, n: Math.min(6, 2 + st.quran.length * 3), bank });
+  const title = `✅ ${t('quiz')}: ${esc(stageTitle(id))}`;
+  runQuiz(app, { title, Qs, onFinish: async (correct, total, details) => {
+    const score = practice ? Math.round((correct / total) * 100) : await S.db.saveQuiz(id, correct, total, details);
     const pass = score >= CONFIG.passScore;
-    if (pass) confetti();
-    app.innerHTML = `${pageHead(`${t('result')}: ${esc(stageTitle(id))}`)}
-    <div class="wrap center" style="max-width:560px;padding-top:30px">
-      <div class="card stack" style="align-items:center;display:flex;flex-direction:column">
-        <div class="ring" style="--p:${score};--size:150px"><b>${score}<small>%</small></b></div>
-        <h2>${pass ? '🌟 ' + t('passed') : t('tryAgain')}</h2>
-        <p class="muted">${correct} / ${Qs.length}</p>
-        <div class="row" style="justify-content:center">
-          <a class="btn" href="#/stage/${id}">${t('back')}</a>
-          ${pass && idx < 11 ? `<a class="btn primary" href="#/stage/${STAGES[idx + 1].id}">${t('stage')} ${idx + 2} ←</a>` : `<a class="btn primary" href="#/quiz/${id}">${t('tryAgain')}</a>`}
-        </div>
-      </div></div>`;
-  };
-  if (!pool.length) { app.innerHTML = `<div class="wrap"><p class="card">${t('error')}</p></div>`; return; }
-  step();
+    app.innerHTML = resultHTML(esc(stageTitle(id)), score, correct, total,
+      `<a class="btn" href="#/stage/${id}">${t('back')}</a>` +
+      (pass && idx < 11 ? `<a class="btn primary" href="#/stage/${STAGES[idx + 1].id}">${t('stage')} ${idx + 2} ←</a>` : `<a class="btn primary" href="#/quiz/${id}">${t('tryAgain')}</a>`));
+    app.querySelectorAll('a[href^="#/"]').forEach((a) => a.setAttribute('href', `#/${S.lang}/` + a.getAttribute('href').slice(2)));
+  } });
 }

@@ -1,12 +1,16 @@
 // =====================================================================
 //  سُبُل السلام — نقطة البداية والموجّه (Router)
+//  #/            الصفحة الرئيسية: الشعار واللغات الأربع
+//  #/{lang}/...  قسم مستقل لكل لغة (es · en · sw · rw)؛ الطالب مقيّد بلغته
 // =====================================================================
 import { CONFIG } from './config.js';
 import { createDB } from './db.js';
-import { S, $, applyUi, esc, toast } from './core.js';
-import { t, getUiLang, UI_LANGS } from './i18n.js';
+import { S, $, applyUi, esc, toast, uiPref, isSup, href } from './core.js';
+import { t, getUiLang } from './i18n.js';
 
-import landing from './views/landing.js';
+import root from './views/root.js';
+import langHome from './views/hub.js';
+import learnCenter from './views/learncenter.js';
 import * as auth from './views/auth.js';
 import * as learn from './views/learn.js';
 import * as quran from './views/quran.js';
@@ -14,68 +18,87 @@ import * as hadith from './views/hadith.js';
 import * as library from './views/library.js';
 import * as dawah from './views/dawah.js';
 import * as sup from './views/supervisor.js';
-import sources from './views/sources.js';
-import hub from './views/hub.js';
 import * as sp from './views/studentpage.js';
+import * as extra from './views/extra.js';
+import sources from './views/sources.js';
 
-const routes = [
-  [/^\/?$/, landing],
-  [/^\/login$/, auth.login],
-  [/^\/signup$/, auth.signup],
-  [/^\/profile$/, auth.profile],
-  [/^\/(sw|rw|es|en)$/, hub],
-  [/^\/me(?:\/(path|follow|chat|tests))?$/, sp.mePage],
-  [/^\/learn$/, () => { location.hash = '#/me'; }],
-  [/^\/join\/(\w+)$/, auth.join],
-  [/^\/stage\/(s\d+)$/, learn.stage],
-  [/^\/item\/(\d+)$/, learn.item],
-  [/^\/quiz\/(s\d+)$/, learn.quiz],
-  [/^\/quran$/, quran.list],
-  [/^\/quran\/(\d+)$/, quran.reader],
-  [/^\/hadith$/, hadith.categories],
-  [/^\/hadith\/cat\/(\d+)(?:\/(\d+))?$/, hadith.list],
-  [/^\/hadith\/(\d+)$/, hadith.one],
-  [/^\/library(?:\/(\w+))?(?:\/(\d+))?$/, library.browse],
-  [/^\/dawah(?:\/(\w+))?(?:\/([\w-]+))?$/, dawah.corner],
-  [/^\/supervisor$/, sup.dashboard],
-  [/^\/supervisor\/student\/([\w-]+)(?:\/(path|follow|chat|tests))?$/, sp.supStudentPage],
-  [/^\/supervisor\/questions(?:\/(s\d+))?$/, sup.questions],
-  [/^\/admin$/, sup.admin],
+// مسارات خارج الأقسام
+const GLOBAL = [
+  [/^\/?$/, root],
   [/^\/sources$/, sources],
+  [/^\/admin$/, sup.admin],
 ];
+// مسارات داخل قسم اللغة (بعد #/{lang})
+const SCOPED = [
+  [/^$/, langHome],
+  [/^learn$/, learnCenter],
+  [/^login$/, auth.login],
+  [/^signup$/, auth.signup],
+  [/^profile$/, auth.profile],
+  [/^join\/(\w+)$/, auth.join],
+  [/^me(?:\/(today|path|reviews|tests|chat|follow))?$/, sp.mePage],
+  [/^stage\/(s\d+)$/, learn.stage],
+  [/^item\/(\d+)$/, learn.item],
+  [/^quiz\/(s\d+)$/, learn.quiz],
+  [/^review\/(weekly|monthly)$/, extra.review],
+  [/^prayer$/, extra.prayer],
+  [/^videos$/, extra.videos],
+  [/^books$/, extra.books],
+  [/^quran$/, quran.list],
+  [/^quran\/(\d+)$/, quran.reader],
+  [/^hadith$/, hadith.categories],
+  [/^hadith\/cat\/(\d+)(?:\/(\d+))?$/, hadith.list],
+  [/^hadith\/(\d+)$/, hadith.one],
+  [/^library(?:\/(\w+))?(?:\/(\d+))?$/, library.browse],
+  [/^dawah(?:\/(\w+))?(?:\/([\w-]+))?$/, dawah.corner],
+  [/^supervisor$/, sup.dashboard],
+  [/^supervisor\/(cards|guide|language|material|media)$/, sup.section],
+  [/^supervisor\/student\/([\w-]+)(?:\/(path|follow|chat|tests|reviews|today))?$/, sp.supStudentPage],
+  [/^supervisor\/questions(?:\/(s\d+))?$/, sup.questions],
+];
+const LANGS = Object.keys(CONFIG.languages);
 
 let unreadBadge = 0;
 async function refreshBadge() {
   if (!S.me) { unreadBadge = 0; return; }
   const u = await S.db.unread().catch(() => []);
-  const n = u.length; if (n !== unreadBadge) { unreadBadge = n; renderNav(); }
+  if (u.length !== unreadBadge) { unreadBadge = u.length; renderNav(); }
 }
 
 function renderNav() {
-  const me = S.me, isSup = ['supervisor', 'admin'].includes(me?.role);
-  const L = CONFIG.languages[S.lang];
-  const links = [
-    ['#/', t('home')], [`#/${S.lang}`, `🌍 ${esc(L?.name || '')}`],
-    ...(me?.role === 'student' ? [['#/me', t('myPage') + (unreadBadge ? ` <span class="chip red tiny">${unreadBadge}</span>` : '')]] : []),
-    ['#/quran', t('quran')], ['#/hadith', t('hadith')],
-    ['#/library', t('library')], ['#/dawah', t('dawah')],
-    ...(isSup ? [['#/supervisor', t('supervisor') + (unreadBadge ? ` <span class="chip red tiny">${unreadBadge}</span>` : '')]] : []),
-    ...(me?.role === 'admin' ? [['#/admin', t('admin')]] : []),
-    me ? ['#/profile', '👤 ' + esc(me.full_name || me.email.split('@')[0])] : ['#/login', t('login')],
-  ];
-  const cur = '#' + (location.hash.slice(1).split('/').slice(0, 2).join('/') || '/');
-  $('#nav').innerHTML = links.map(([h, l]) => `<a href="${h}"${cur === h || (h !== '#/' && cur.startsWith(h)) ? ' aria-current="page"' : ''}>${l}</a>`).join('') +
-    `<select class="lang-pick" id="ui-pick" aria-label="Language">
-      ${UI_LANGS.filter((l) => l === 'ar' || l === 'en' || CONFIG.languages[l]?.enabled).map((l) =>
-        `<option value="${l}"${getUiLang() === l ? ' selected' : ''}>${l === 'ar' ? 'العربية' : CONFIG.languages[l]?.name || l}</option>`).join('')}
-    </select>`;
-  $('#ui-pick').onchange = (e) => { applyUi(e.target.value); render(); };
+  const me = S.me, L = S.routeLang;
+  const badge = unreadBadge ? ` <span class="chip red tiny">${unreadBadge}</span>` : '';
+  let links;
+  if (!L) {
+    links = [['#/', t('home')], ['#/sources', t('sources')], ...(me?.role === 'admin' ? [['#/admin', t('admin')]] : [])];
+  } else if (me?.role === 'student') {
+    links = [[href(), '🏠'], [href('me/today'), t('today')], [href('me'), t('myPage') + badge], [href('quran'), t('quran')], [href('hadith'), t('hadith')],
+             [href('prayer'), t('prayerWudu')], [href('videos'), t('videos')], [href('books'), t('booksGuide')]];
+  } else if (isSup()) {
+    links = [[href(), '🏠'], [href('supervisor'), t('students') + badge], [href('supervisor/cards'), t('cards')], [href('supervisor/guide'), t('guide')],
+             [href('supervisor/language'), t('langLearn')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('supervisor/material'), t('material')],
+             ...(me.role === 'admin' ? [['#/admin', t('admin')]] : [])];
+  } else {
+    links = [[href(), '🏠'], [href('learn'), t('learnCenter')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('prayer'), t('prayerWudu')],
+             [href('login'), t('login')], [href('signup'), t('signup')]];
+  }
+  if (me && L) links.push([href('profile'), '👤 ' + esc(me.full_name || me.email.split('@')[0])]);
+  const cur = location.hash || '#/';
+  const best = links.map(([h]) => h).filter((h) => cur === h || cur.startsWith(h + '/')).sort((a, b) => b.length - a.length)[0];
+  $('#nav').innerHTML = links.map(([h, l]) => `<a href="${h}"${h === best ? ' aria-current="page"' : ''}>${l}</a>`).join('');
+  $('#ui-slot').innerHTML = (L ? `<button class="lang-toggle" id="ui-toggle" aria-label="العربية / ${esc(CONFIG.languages[L].name)}">
+        <span${getUiLang() === 'ar' ? ' class="on"' : ''}>عربي</span><span${getUiLang() === L ? ' class="on"' : ''}>${esc(CONFIG.languages[L].name)}</span></button>`
+       : '');
+  $('#ui-toggle')?.addEventListener('click', () => { applyUi(uiPref() === 'ar' ? L : 'ar'); render(); });
+  // الشعار يعيد إلى الصفحة الرئيسية للغة أو إلى اختيار اللغات
+  $('.brand').setAttribute('href', L ? href() : '#/');
+  $('#brand-lang').textContent = L ? CONFIG.languages[L].name.toUpperCase() : 'SUBUL AS-SALAM';
 }
 
 function renderFoot() {
   $('#foot').innerHTML = `
     <div class="row between"><b>${esc(CONFIG.brand.nameAr)} · ${esc(CONFIG.brand.nameLatin)}</b>
-      <a href="#/sources">${t('sources')}</a></div>
+      <span class="row"><a href="#/">🌍 ${t('home')}</a><a href="#/sources">${t('sources')}</a></span></div>
     <div>المحتوى الشرعي يُعرض كما هو من مصادره مع ذكرها:
       <a href="https://islamhouse.com" target="_blank" rel="noopener">IslamHouse.com</a> ·
       <a href="https://quranenc.com" target="_blank" rel="noopener">QuranEnc.com</a> ·
@@ -86,32 +109,60 @@ function renderFoot() {
     <div class="tiny">${t('sisterSite')}: <a href="${CONFIG.languages.es.sister}" target="_blank" rel="noopener">رفيق الداعية</a></div>`;
 }
 
+// يحوّل الروابط القديمة (#/quran …) إلى روابط القسم الحالي (#/{lang}/quran)
+function scopeLinks(root) {
+  root.querySelectorAll('a[href^="#/"]').forEach((a) => {
+    const p = a.getAttribute('href').slice(2);
+    const first = p.split('/')[0];
+    if (!p || LANGS.includes(first) || GLOBAL.some(([re]) => re.test('/' + p))) return;
+    a.setAttribute('href', href(p));
+  });
+}
+
 let renderId = 0;
 export async function render() {
   const id = ++renderId;
-  const path = location.hash.replace(/^#/, '') || '/';
+  let path = location.hash.replace(/^#\/?/, '');
+  const seg = path.split('/')[0];
+  if (LANGS.includes(seg)) {
+    S.routeLang = seg;
+    path = path.slice(seg.length).replace(/^\//, '');
+    // الطالب يبقى في قسم لغته
+    if (S.me?.role === 'student' && S.me.lang && S.me.lang !== seg && CONFIG.languages[S.me.lang]) {
+      toast(`${t('myPage')}: ${CONFIG.languages[S.me.lang].name}`);
+      location.replace(`#/${S.me.lang}${path ? '/' + path : ''}`); return;
+    }
+    S.lang = seg;
+  } else {
+    S.routeLang = null;
+    if (!GLOBAL.some(([re]) => re.test('/' + path))) { location.replace(`#/${S.lang}/${path}`); return; }
+  }
+  applyUi();
   const app = $('#app');
   renderNav(); renderFoot();
   if (S.db.mode === 'local') $('#demo-bar').textContent = t('demo');
   $('#nav').classList.remove('open');
-  for (const [re, view] of routes) {
-    const m = path.match(re);
+  const table = S.routeLang ? SCOPED : GLOBAL;
+  const key = S.routeLang ? path : '/' + path;
+  for (const [re, view] of table) {
+    const m = key.match(re);
     if (!m) continue;
     try {
       const out = await view(app, ...m.slice(1));
       if (id !== renderId) return;
       if (typeof out === 'string') app.innerHTML = out;
+      scopeLinks(app); scopeLinks($('#foot'));
     } catch (e) {
       console.error(e);
       if (id === renderId) app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card"><p>${t('error')}</p><p class="tiny muted">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">${t('retry')}</button></div></div>`;
     }
-    if (!path.includes('#')) window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
     return;
   }
   app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card">404 — <a href="#/">${t('home')}</a></div></div>`;
 }
 
-// رابط الدعوة #/join/CODE: يُحفظ الرمز حتى يدخل الطالب ثم يُرسل طلب الربط تلقائيًّا
+// رابط الدعوة #/{lang}/join/CODE: يُحفظ الرمز حتى يدخل الطالب ثم يُرسل طلب الربط تلقائيًّا
 async function processJoin() {
   const code = localStorage.getItem('subul-join');
   if (!code || !S.me) return;
@@ -124,12 +175,16 @@ async function processJoin() {
 async function boot() {
   S.db = await createDB();
   S.me = await S.db.init();
-  applyUi();
-  if (S.db.mode === 'local') { const b = $('#demo-bar'); b.textContent = t('demo'); b.classList.remove('hidden'); }
+  if (S.db.mode === 'local') $('#demo-bar').classList.remove('hidden');
   S.db.onChange(async (me) => {
-    const was = S.me?.id; S.me = me; applyUi();
+    const was = S.me?.id; S.me = me;
     if (me) await processJoin();
-    if (was !== me?.id) { if (me && /^#\/(login|signup)?$/.test(location.hash || '#/')) location.hash = ['supervisor', 'admin'].includes(me.role) ? '#/supervisor' : '#/me'; else render(); }
+    if (was !== me?.id) {
+      if (me && /\/(login|signup)$/.test(location.hash)) {
+        const L = me.role === 'student' ? me.lang : S.lang;
+        location.hash = isSup() ? `#/${L}/supervisor` : `#/${L}/me/today`;
+      } else render();
+    }
   });
   $('#burger').onclick = () => { const n = $('#nav'); n.classList.toggle('open'); $('#burger').setAttribute('aria-expanded', n.classList.contains('open')); };
   addEventListener('hashchange', render);

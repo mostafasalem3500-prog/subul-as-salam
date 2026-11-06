@@ -251,7 +251,7 @@ end $$;
 create or replace view public.student_overview
 with (security_invoker = true) as
 select p.id, p.email, p.full_name, p.lang, p.country, p.created_at, p.last_seen_at,
-       (select count(*) from public.progress pr where pr.student_id = p.id)                 as done_items,
+       (select count(*) from public.progress pr where pr.student_id = p.id and pr.kind not in ('prayer','daily')) as done_items,
        (select max(completed_at) from public.progress pr where pr.student_id = p.id)        as last_activity,
        (select round(avg(best)) from (select max(score) best from public.quiz_attempts q
                                        where q.student_id = p.id group by stage_id) b)     as avg_quiz,
@@ -315,6 +315,27 @@ create table if not exists public.dawah_messages (
   author_id  uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+-- بنك مرئيات يوتيوب لكل لغة: روابط من قنوات رسمية لمصادر معتمدة، يضيفها المشرفون ويعتمدها المدير
+create table if not exists public.media_links (
+  id         bigint generated always as identity primary key,
+  lang       text not null,
+  stage_id   text,
+  title      text not null,
+  url        text not null check (url ~* '^https://(www\.)?(youtube\.com|youtu\.be)/'),
+  source     text not null,
+  status     text not null default 'draft' check (status in ('draft','approved')),
+  author_id  uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create or replace function public.approve_media_link(p_id bigint, p_ok boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  if p_ok then update public.media_links set status = 'approved' where id = p_id;
+  else delete from public.media_links where id = p_id; end if;
+end $$;
 
 -- المشرف يصحّح الإجابة
 create or replace function public.grade_submission(p_assignment bigint, p_score int, p_feedback text) returns void
@@ -489,6 +510,17 @@ create policy p_dm_delete on public.dawah_messages for delete using (author_id =
 
 grant select on public.student_overview to authenticated;
 grant select on public.dawah_messages to anon;
+
+alter table public.media_links enable row level security;
+drop policy if exists p_ml_select on public.media_links;
+create policy p_ml_select on public.media_links for select
+  using (status = 'approved' or author_id = auth.uid() or public.is_admin());
+drop policy if exists p_ml_insert on public.media_links;
+create policy p_ml_insert on public.media_links for insert
+  with check (author_id = auth.uid() and status = 'draft' and public.my_role() in ('supervisor','admin'));
+drop policy if exists p_ml_delete on public.media_links;
+create policy p_ml_delete on public.media_links for delete using (author_id = auth.uid() or public.is_admin());
+grant select on public.media_links to anon;
 
 -- =====================================================================
 --  بعد التشغيل: اجعل نفسك مديرًا (بدّل الإيميل بإيميلك بعد أن تسجّل في الموقع):

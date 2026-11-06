@@ -87,7 +87,14 @@ export const audioUrl = (reciter, s, a) => `${CONFIG.api.audioBase}${reciter}/${
 
 // مساعدات
 export const ihTypeIcon = (type) => ({ books: '📘', articles: '📄', audios: '🎧', videos: '🎬', poster: '🖼', fatwa: '⚖', khotab: '🎙', favorites: '⭐' }[type] || '📎');
+// رابط يوتيوب → رابط تضمين بخصوصية مُحسَّنة (youtube-nocookie)
+export function ytId(url) {
+  const m = String(url || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+export const ytEmbed = (url) => `https://www.youtube-nocookie.com/embed/${ytId(url)}?rel=0`;
 export function attachmentKind(a) {
+  if (ytId(a?.url)) return 'youtube';
   const e = (a?.extension_type || '').toUpperCase();
   if (['MP3', 'M4A', 'OGG', 'WAV'].includes(e)) return 'audio';
   if (['MP4', 'WEBM'].includes(e)) return 'video';

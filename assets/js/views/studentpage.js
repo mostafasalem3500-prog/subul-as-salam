@@ -3,23 +3,25 @@
 //  التبويبات: المنهج · المتابعة · المحادثات · الاختبارات
 // =====================================================================
 import { CONFIG } from '../config.js';
-import { S, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal, isSup, timeShort, linkify, confetti } from '../core.js';
-import { STAGES, surahName } from '../curriculum.js';
+import { S, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal, isSup, timeShort, linkify, confetti, href } from '../core.js';
+import { STAGES, surahName, surahAyat } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
-import { needLogin, journeyHTML, drawJourney } from './components.js';
+import { needLogin, journeyHTML, drawJourney, verseCard } from './components.js';
+import { HE } from '../api.js';
+import { videoCard, wireVideos, prayerTrackerHTML, wirePrayerTracker, prayerHeatHTML, todayKey, isoWeek, monthKey } from './extra.js';
 import { autoScore } from '../db.js';
 
-const TABS = [['path', '🧭', 'curriculum'], ['follow', '📊', 'follow'], ['chat', '💬', 'chat'], ['tests', '📝', 'tests']];
+const TABS = [['today', '☀️', 'today'], ['path', '🧭', 'curriculum'], ['reviews', '🔁', 'reviews'], ['tests', '📝', 'tests'], ['chat', '💬', 'chat'], ['follow', '📊', 'follow']];
 let stopChat = null;
 addEventListener('hashchange', () => { stopChat?.(); stopChat = null; });
 
 // ---------------------------------------------------------------- نقاط الدخول
-export async function mePage(app, tab = 'path') {
+export async function mePage(app, tab = 'today') {
   if (!S.me) return needLogin();
   if (S.me.role !== 'student') { location.hash = '#/supervisor'; return; }
   return studentPage(app, S.me, 'student', tab);
 }
-export async function supStudentPage(app, id, tab = 'path') {
+export async function supStudentPage(app, id, tab = 'follow') {
   if (!S.me) return needLogin();
   if (!isSup()) return `<div class="wrap" style="padding-top:30px"><p class="card" lang="ar">للمشرفين فقط.</p></div>`;
   const st = await S.db.student(id);
@@ -53,6 +55,7 @@ async function studentPage(app, student, viewer, tab) {
         <p style="opacity:.9">${t('currentStage')}: <b>${cur.stage.icon} ${esc(stageTitle(cur.stage.id, viewer === 'student' ? undefined : 'ar'))}</b> (${P.current + 1}/12)
           · ${t('avgScore')}: <b>${P.avg ?? '—'}</b>
           ${viewer === 'supervisor' ? `<br><span class="small" dir="ltr">${esc(student.email)}</span> · <span class="chip gold">${esc(lang)}</span> ${student.country ? '· ' + esc(student.country) : ''}` : ''}</p>
+        <p class="small" style="opacity:.9">🔥 ${t('streak')}: <b>${streakOf(D)}</b></p>
         ${viewer === 'student' && supervisors.length ? `<p class="small" style="opacity:.85">🎓 ${t('linkedWith')}: ${supervisors.map((s) => esc(s.full_name || s.email)).join('، ')}</p>` : ''}
       </div>
     </div>
@@ -62,6 +65,8 @@ async function studentPage(app, student, viewer, tab) {
   </div></div>
   <div class="wrap stack" id="tab-body"></div>`;
   const body = app.querySelector('#tab-body');
+  if (tab === 'today') return todayTab(body, ctx);
+  if (tab === 'reviews') return reviewsTab(body, ctx);
   if (tab === 'follow') return followTab(body, ctx);
   if (tab === 'chat') return chatTab(body, ctx);
   if (tab === 'tests') return testsTab(body, ctx);
@@ -229,9 +234,7 @@ async function chatTab(body, ctx) {
 async function testsTab(body, ctx) {
   const { student, viewer, D, supervisors, links } = ctx;
   const reload = () => studentPage(ctx.app, student, viewer, 'tests');
-  if (viewer === 'student' && !supervisors.length && !D.assignments.length) {
-    body.innerHTML = linkBoxHTML(links); wireLinkBox(body, reload); return;
-  }
+  const noSup = viewer === 'student' && !supervisors.length && !D.assignments.length;
   const asgCard = (a) => {
     const s = a.submission;
     const state = !s ? `<span class="chip gold">${viewer === 'student' ? '🆕' : '🕓 ' + t('notSubmitted')}</span>`
@@ -265,10 +268,16 @@ async function testsTab(body, ctx) {
       </div></details>`;
   };
 
+  const P = ctx.P;
   body.innerHTML = `
+    <h2>✅ ${t('quiz')}</h2>
+    <div class="stage-grid">${P.stages.map((x, i) => `<a class="card lift row between" href="${href('quiz/' + x.stage.id)}" style="border-top:4px solid ${x.stage.color}">
+      <span>${x.stage.icon} ${i + 1}. ${esc(stageTitle(x.stage.id, viewer === 'supervisor' ? 'ar' : undefined))}</span>
+      ${x.bestQuiz != null ? `<span class="chip ${x.bestQuiz >= CONFIG.passScore ? 'ok' : 'gold'}">${x.bestQuiz}%</span>` : '<span class="chip">—</span>'}</a>`).join('')}</div>
     ${viewer === 'supervisor' ? newTestForm(student) : ''}
-    <h2>📝 ${t('tests')}</h2>
-    ${D.assignments.length ? D.assignments.map(asgCard).join('') : `<p class="card muted">${t('noTests')}</p>`}`;
+    <h2>📝 ${t('tests')} · ${t('supervisor')}</h2>
+    ${noSup ? linkBoxHTML(links) : D.assignments.length ? D.assignments.map(asgCard).join('') : `<p class="card muted">${t('noTests')}</p>`}`;
+  if (noSup) wireLinkBox(body, reload);
 
   // الطالب يجيب
   body.querySelectorAll('[data-ans]').forEach((f) => f.onsubmit = async (e) => {
@@ -343,4 +352,87 @@ function wireNewTest(body, student, reload) {
       toast('✓ ' + t('send')); reload();
     } catch (er) { toast(er.message); }
   };
+}
+
+// ---------------------------------------------------------------- أيام متتالية
+function streakOf(D) {
+  const days = new Set([...D.progress.map((p) => p.completed_at), ...D.quizzes.map((q) => q.created_at)].filter(Boolean).map((d) => todayKey(new Date(d))));
+  let n = 0; const d = new Date();
+  if (!days.has(todayKey(d))) d.setDate(d.getDate() - 1);
+  while (days.has(todayKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+const dayIndex = () => Math.floor(Date.now() / 864e5);
+
+// ---------------------------------------------------------------- اليوم: الدرس اليومي
+async function todayTab(body, ctx) {
+  const { P, D, viewer, student } = ctx;
+  const lang = student.lang || CONFIG.defaultLang;
+  const cur = P.stages[P.current], st = cur.stage;
+  const di = dayIndex(), today = todayKey();
+  const items = st.ih[lang] || [];
+  const readId = items.find((id) => !P.done.has('ih:' + id)) ?? items[di % Math.max(1, items.length)];
+  // آيات اليوم: أول سورة لم تُحفظ في المحطة، ثلاث آيات يوميًّا
+  const s = st.quran.find((n) => !P.done.has('quran:' + n)) ?? st.quran[di % st.quran.length];
+  const chunks = Math.ceil(surahAyat(s) / 3), part = di % chunks, from = part * 3 + 1, to = Math.min(surahAyat(s), from + 2);
+  const vids = st.vid?.[lang] || [];
+  const vid = vids.length ? vids[di % vids.length] : null;
+  const doneToday = P.done.has('daily:' + today);
+  const asStudent = viewer === 'student';
+  const w = D.quizzes.find((q) => q.stage_id === 'w:' + isoWeek()), m = D.quizzes.find((q) => q.stage_id === 'm:' + monthKey());
+  const prayed = new Set(D.progress.map((p) => p.item_key));
+  body.innerHTML = `
+    <div class="today-grid">
+      <div class="stack">
+        <div class="card row between" style="background:linear-gradient(135deg,var(--gold-soft),var(--surface))">
+          <div class="streak"><span class="flame">🔥</span><div><b style="font-size:1.6rem;font-family:var(--lat)">${streakOf(D)}</b><div class="small muted">${t('streak')}</div></div></div>
+          <div><b>☀️ ${t('dailyLesson')}</b><div class="small muted">${new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : lang, { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
+        </div>
+        ${readId ? `<a class="task${P.done.has('ih:' + readId) ? ' ok' : ''}" href="${href('item/' + readId)}"><span class="ti">📖</span><span style="min-width:0"><b>${t('read')}</b><div class="small muted" data-ihtitle="${readId}">IslamHouse #${readId}</div></span></a>` : ''}
+        <div class="card stack"><div class="row between"><b>🧠 ${t('todayAyat')}: <span lang="ar">${esc(surahName(s))}</span> ${from}–${to}</b>
+          <a class="btn sm primary" href="${href('quran/' + s)}">▶ ${t('listen')} · ${t('memorize')}</a></div><div id="tayat"><div class="skeleton" style="height:80px"></div></div></div>
+        <div class="card stack" id="thad"><b>🌿 ${t('hadithDay')}</b><div class="skeleton" style="height:40px"></div></div>
+        ${vid ? `<div class="stack"><b>🎬 ${t('videoDay')}</b>${videoCard(vid)}</div>` : ''}
+      </div>
+      <div class="stack">
+        <div class="card stack"><b>🕐 ${t('prayerTracker')}</b>${prayerTrackerHTML(prayed, asStudent)}${prayerHeatHTML(D.progress)}</div>
+        <a class="task${w ? ' ok' : ''}" href="${href('review/weekly')}"><span class="ti">🔁</span><span><b>${t('weekly')}</b><div class="small muted">${w ? `✓ ${w.score}%` : isoWeek()}</div></span></a>
+        <a class="task${m ? ' ok' : ''}" href="${href('review/monthly')}"><span class="ti">🗓️</span><span><b>${t('monthly')}</b><div class="small muted">${m ? `✓ ${m.score}%` : monthKey()}</div></span></a>
+        <a class="task" href="${href('quiz/' + st.id)}"><span class="ti">✅</span><span><b>${t('quiz')}</b><div class="small muted">${st.icon} ${esc(stageTitle(st.id))}${cur.bestQuiz != null ? ' · ' + cur.bestQuiz + '%' : ''}</div></span></a>
+        <a class="task" href="${href('prayer')}"><span class="ti">💧</span><span><b>${t('prayerWudu')}</b><div class="small muted">${t('wudu')} · ${t('prayerSteps')}</div></span></a>
+        ${asStudent ? `<button class="btn ${doneToday ? 'done' : 'primary'}" id="mark-day">${doneToday ? '✓ ' + t('doneThis') : '☑ ' + t('markLesson')}</button>` : ''}
+      </div>
+    </div>`;
+  wireVideos(body);
+  if (asStudent) wirePrayerTracker(body);
+  body.querySelectorAll('[data-ihtitle]').forEach(async (el) => { try { const { IH } = await import('../api.js'); el.textContent = (await IH.item(el.dataset.ihtitle, CONFIG.languages[lang].ih)).title; } catch { /* */ } });
+  verseCard(`${s}:${from}-${to}`).then((h) => { body.querySelector('#tayat').innerHTML = h; }).catch(() => { body.querySelector('#tayat').textContent = ''; });
+  HE.list(CONFIG.languages[lang].hadeeth, st.hadith, 1, 20).then((r) => {
+    const list = r.data || []; const h = list[di % Math.max(1, list.length)];
+    body.querySelector('#thad').innerHTML = `<b>🌿 ${t('hadithDay')}</b>` + (h ? `<a class="card lift" href="${href('hadith/' + h.id)}" dir="auto" lang="${lang}" translate="no" style="text-decoration:none;color:inherit">${esc(h.title)}</a><span class="tiny muted">HadeethEnc.com</span>` : '');
+  }).catch(() => {});
+  body.querySelector('#mark-day')?.addEventListener('click', async (e) => {
+    if (doneToday) return;
+    await S.db.markDone('daily:' + today, 'daily', 'daily'); confetti();
+    e.target.className = 'btn done'; e.target.textContent = '✓ ' + t('doneThis');
+  });
+}
+
+// ---------------------------------------------------------------- المراجعات
+function reviewsTab(body, ctx) {
+  const { D, viewer } = ctx;
+  const hist = D.quizzes.filter((q) => /^[wm]:/.test(q.stage_id)).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const w = hist.find((q) => q.stage_id === 'w:' + isoWeek()), m = hist.find((q) => q.stage_id === 'm:' + monthKey());
+  body.innerHTML = `
+    <div class="grid-2">
+      <div class="card stack" style="border-top:4px solid var(--green-3)"><h3>🔁 ${t('weekly')} · ${isoWeek()}</h3>
+        <p class="small muted" lang="ar">مراجعة لسور آخر محطات درستها، تُبنى من الترجمة المعتمدة. مرة كل أسبوع.</p>
+        ${w ? `<p>✓ <b>${w.score}%</b></p>` : ''}${viewer === 'student' ? `<a class="btn primary" href="${href('review/weekly')}">${t('startReview')}</a>` : ''}</div>
+      <div class="card stack" style="border-top:4px solid var(--gold-2)"><h3>🗓️ ${t('monthly')} · ${monthKey()}</h3>
+        <p class="small muted" lang="ar">مراجعة شاملة لكل ما درسه منذ البداية، ومعها أسئلة فريق التعليم.</p>
+        ${m ? `<p>✓ <b>${m.score}%</b></p>` : ''}${viewer === 'student' ? `<a class="btn primary" href="${href('review/monthly')}">${t('startReview')}</a>` : ''}</div>
+    </div>
+    <div class="card stack"><h3>📈 ${t('result')}</h3>
+      ${hist.length ? `<div class="dist" style="height:120px">${hist.slice(0, 12).reverse().map((q) => `<div class="col" title="${esc(q.stage_id)}: ${q.score}%"><span>${q.score}</span><i style="height:${q.score}%"></i><span>${q.stage_id.startsWith('w') ? 'W' + q.stage_id.slice(-2) : 'M' + q.stage_id.slice(-2)}</span></div>`).join('')}</div>`
+        : `<p class="muted small">—</p>`}</div>`;
 }
