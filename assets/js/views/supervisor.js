@@ -1,7 +1,7 @@
 // نافذة المشرف: طلابي، تفاصيل الطالب وتقييمه، بنك الأسئلة، والإدارة
 import { CONFIG } from '../config.js';
-import { S, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal } from '../core.js';
-import { STAGES, surahName } from '../curriculum.js';
+import { S, esc, toast, ago, computeProgress, loadStudentData, loading, reveal } from '../core.js';
+import { STAGES } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
 import { pageHead, needLogin } from './components.js';
 
@@ -17,7 +17,11 @@ const langChip = (l) => `<span class="chip sky" dir="ltr">${esc(l || '')}</span>
 export async function dashboard(app) {
   const g = gate(); if (g) return g;
   app.innerHTML = loading();
-  const students = await S.db.myStudents();
+  const [students, links, unread] = await Promise.all([S.db.myStudents(), S.db.links(), S.db.unread().catch(() => [])]);
+  const reqs = links.filter((l) => l.status === 'pending' && l.waitingForMe);
+  const sent = links.filter((l) => l.status === 'pending' && !l.waitingForMe);
+  const unreadOf = (id) => unread.filter((m) => m.student_id === id).length;
+  const invite = S.me.supervisor_code ? `${location.origin}${location.pathname}#/join/${S.me.supervisor_code}` : '';
   const rows = await Promise.all(students.map(async (s) => ({ s, P: computeProgress(s.lang || CONFIG.defaultLang, await loadStudentData(s.id)) })));
   rows.sort((a, b) => new Date(b.s.last_activity || 0) - new Date(a.s.last_activity || 0));
   const n = rows.length;
@@ -37,17 +41,23 @@ export async function dashboard(app) {
       <div class="stat"><b>${avgScore}</b><span>${t('avgScore')}</span></div>
       <div class="stat"><b>${active}</b><span lang="ar">نشِطون آخر 7 أيام</span></div>
     </div>
+    ${reqs.length ? `<div class="card stack" style="border:2px solid var(--gold-2)"><h3>🔔 ${t('requests')} (${reqs.length})</h3>
+      ${reqs.map((l) => `<div class="row between"><span><b>${esc(l.other.full_name || '')}</b> <span class="tiny muted" dir="ltr">${esc(l.other.email || '')}</span> ${langChip(l.other.lang)} ${esc(l.other.country || '')}</span>
+        <span class="row"><button class="btn sm primary" data-acc="${l.other.id}">${t('accept')}</button><button class="btn sm" data-dec="${l.other.id}">${t('decline')}</button></span></div>`).join('')}</div>` : ''}
     <div class="grid-2">
       <div class="card reveal"><h3 lang="ar">توزيع الطلاب على المحطات</h3>
         <div class="dist">${dist.map((d, i) => `<div class="col" title="${esc(stageTitle(STAGES[i].id, 'ar'))}: ${d}"><span>${d || ''}</span><i style="height:${(d / maxD) * 100}%;animation-delay:${i * 60}ms"></i><span>${i + 1}</span></div>`).join('')}</div></div>
-      <form class="card stack reveal" id="add"><h3>➕ ${t('addStudent')}</h3>
-        <input id="em" type="email" dir="ltr" required placeholder="student@email.com">
-        <button class="btn primary">${t('link')}</button>
-        <p class="tiny muted" lang="ar">يجب أن يكون الطالب قد سجّل في الموقع. أو أعطه رمز الإشراف أعلاه ليرتبط بك بنفسه.</p></form>
+      <div class="card stack reveal"><h3>🔗 ربط طالب بحسابك</h3>
+        <form class="row" id="add"><input id="em" type="email" dir="ltr" required placeholder="student@email.com" style="flex:1;min-width:180px"><button class="btn primary">${t('link')}</button></form>
+        <p class="tiny muted" lang="ar">١) بالإيميل: تصل الطالبَ دعوة في حسابه فيوافق عليها. ٢) برابط الدعوة: يفتحه الطالب فيصلك طلبه هنا. ٣) برمز الإشراف يكتبه في صفحته.</p>
+        ${invite ? `<div class="row"><input readonly dir="ltr" value="${esc(invite)}" id="inv" style="flex:1;min-width:180px;font-size:.8rem"><button class="btn sm" id="cp">📋</button>
+          <a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(invite)}">WhatsApp</a></div>` : ''}
+        ${sent.length ? `<p class="small">${t('waiting')}: ${sent.map((l) => `<span class="chip gold">${esc(l.other.full_name || l.other.email || '')}</span>`).join(' ')}</p>` : ''}
+      </div>
     </div>
     <div class="row between"><h2>${t('students')}</h2><span class="row"><a class="btn sm" href="#/supervisor/questions">❓ ${t('questions')}</a><button class="btn sm" id="csv">⬇ CSV</button></span></div>
     ${n ? `<div class="table-wrap"><table><thead><tr><th>${t('name')}</th><th>${t('yourLang')}</th><th>${t('currentStage')}</th><th>${t('progress')}</th><th>${t('avgScore')}</th><th>${t('memoSurahs')}</th><th>${t('lastActivity')}</th></tr></thead><tbody>
-      ${rows.map(({ s, P }) => `<tr class="click" data-id="${esc(s.id)}"><td><b>${esc(s.full_name || s.email)}</b><br><span class="tiny muted" dir="ltr">${esc(s.email)}</span>${s.country ? ` <span class="tiny muted">· ${esc(s.country)}</span>` : ''}</td>
+      ${rows.map(({ s, P }) => `<tr class="click" data-id="${esc(s.id)}"><td><b>${esc(s.full_name || s.email)}</b>${unreadOf(s.id) ? ` <span class="chip red tiny">💬 ${unreadOf(s.id)}</span>` : ''}<br><span class="tiny muted" dir="ltr">${esc(s.email)}</span>${s.country ? ` <span class="tiny muted">· ${esc(s.country)}</span>` : ''}</td>
         <td>${langChip(s.lang)}</td>
         <td>${P.allDone ? '🌟 ' : STAGES[P.current].icon} ${P.current + 1}. <span lang="ar">${esc(stageTitle(STAGES[P.current].id, 'ar'))}</span></td>
         <td><span class="mini-bar"><i style="width:${P.overall}%"></i></span> ${P.overall}%</td>
@@ -59,9 +69,11 @@ export async function dashboard(app) {
   app.querySelector('#add').onsubmit = async (e) => {
     e.preventDefault();
     const r = await S.db.linkStudentByEmail(app.querySelector('#em').value).catch((er) => er.message);
-    toast(r === 'ok' ? t('linked') + ' ✓' : r === 'not_found' ? 'لا يوجد طالب مسجّل بهذا الإيميل' : String(r), 3500);
-    if (r === 'ok') dashboard(app);
+    toast(r === 'pending' ? t('sentInvite') : r === 'active' ? t('linked') + ' ✓' : r === 'not_found' ? 'لا يوجد طالب مسجّل بهذا الإيميل — أرسل له رابط الدعوة' : String(r), 4500);
+    if (r === 'pending' || r === 'active') dashboard(app);
   };
+  app.querySelectorAll('[data-acc],[data-dec]').forEach((b) => b.onclick = async () => { await S.db.respondLink(b.dataset.acc || b.dataset.dec, !!b.dataset.acc); toast('✓'); dashboard(app); });
+  app.querySelector('#cp')?.addEventListener('click', () => { navigator.clipboard?.writeText(invite); app.querySelector('#inv').select(); toast(t('copied')); });
   app.querySelector('#csv').onclick = () => {
     const head = ['name', 'email', 'lang', 'country', 'current_stage', 'progress_pct', 'avg_score', 'surahs', 'last_activity',
                   ...STAGES.map((s, i) => `stage${i + 1}_pct`), ...STAGES.map((s, i) => `stage${i + 1}_grade`)];
@@ -70,76 +82,6 @@ export async function dashboard(app) {
     const csv = '﻿' + [head, ...lines].map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `subul-students-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
   };
-}
-
-// ---------------------------------------------------------------- تفاصيل الطالب
-export async function student(app, id) {
-  const g = gate(); if (g) return g;
-  app.innerHTML = loading();
-  const s = await S.db.student(id);
-  if (!s) return `<div class="wrap"><p class="card">404</p></div>`;
-  const D = await loadStudentData(id);
-  const P = computeProgress(s.lang || CONFIG.defaultLang, D);
-  const surahMemo = D.memo.filter((m) => m.kind === 'surah');
-  const hadMemo = D.memo.filter((m) => m.kind === 'hadith');
-  const timeline = [
-    ...D.progress.map((p) => ({ d: p.completed_at, txt: `${p.kind === 'memorize' ? '🧠' : '📖'} ${esc(p.item_key)} · ${t('stage')} ${STAGES.findIndex((x) => x.id === p.stage_id) + 1}` })),
-    ...D.quizzes.map((q) => ({ d: q.created_at, txt: `✅ ${t('quiz')} ${STAGES.findIndex((x) => x.id === q.stage_id) + 1}: <b>${q.score}%</b>` })),
-    ...D.evals.map((e) => ({ d: e.created_at, txt: `🎓 ${t('evaluate')} ${STAGES.findIndex((x) => x.id === e.stage_id) + 1}: <b>${e.score}</b> ${e.passed ? '✔' : ''}` })),
-  ].sort((a, b) => new Date(b.d) - new Date(a.d)).slice(0, 25);
-
-  app.innerHTML = `${pageHead(`👤 ${esc(s.full_name || s.email)}`, `<span dir="ltr">${esc(s.email)}</span> · ${langChip(s.lang)} ${s.country ? '· ' + esc(s.country) : ''} ${s.shahada_date ? `· <span lang="ar">الشهادة: ${fmtDate(s.shahada_date)}</span>` : ''}`,
-    `<div class="ring" style="--p:${P.overall};--size:96px"><b style="font-size:1.3rem">${P.overall}<small>%</small></b></div>`)}
-  <div class="wrap stack" style="padding-top:20px">
-    <div class="stats">
-      <div class="stat"><b>${P.current + 1}</b><span>${t('currentStage')}</span></div>
-      <div class="stat"><b>${P.avg ?? '—'}</b><span>${t('avgScore')}</span></div>
-      <div class="stat"><b>${surahMemo.filter((m) => m.status !== 'learning').length}</b><span>${t('memoSurahs')}</span></div>
-      <div class="stat"><b>${ago(D.progress.map((p) => p.completed_at).sort().pop())}</b><span>${t('lastActivity')}</span></div>
-    </div>
-    <h2>${t('stages')}</h2>
-    <div class="stage-grid">${P.stages.map((x, i) => `<div class="card stack" style="border-top:4px solid ${x.stage.color}">
-      <div class="row between"><b>${x.stage.icon} ${i + 1}. <span lang="ar">${esc(stageTitle(x.stage.id, 'ar'))}</span></b>${x.complete ? '<span class="chip ok">✔</span>' : ''}</div>
-      <div class="qbar"><i style="width:${x.pct}%"></i></div>
-      <p class="small">${x.doneTasks}/${x.tasks.length} · ${t('quiz')}: <b>${x.bestQuiz ?? '—'}</b> · ${t('evaluate')}: <b>${x.eval?.score ?? '—'}</b></p>
-      ${x.eval?.notes ? `<p class="tiny muted">${esc(x.eval.notes)}</p>` : ''}
-      <button class="btn sm" data-ev="${x.stage.id}">🎓 ${t('evaluate')}</button></div>`).join('')}</div>
-
-    <dialog id="dlg" style="border:0;border-radius:16px;padding:0;max-width:440px;width:92vw">
-      <form method="dialog" class="card stack" id="evf"><h3 id="dlg-t"></h3>
-        <label for="sc">${t('score')} (0–100)</label><input id="sc" type="number" min="0" max="100" required value="90">
-        <label class="row" style="font-weight:600"><input id="ps" type="checkbox" style="width:auto;min-height:0" checked> ${t('passed')}</label>
-        <label for="nt">${t('notes')}</label><textarea id="nt" placeholder="مثال: تسميع الفاتحة متقن، يحتاج مراجعة أحكام الوضوء"></textarea>
-        <div class="row"><button class="btn primary" value="ok">${t('save')}</button><button class="btn" value="cancel" formnovalidate>${t('back')}</button></div></form></dialog>
-
-    <div class="grid-2">
-      <div class="card stack"><h3>🧠 ${t('memoSurahs')}</h3>
-        ${surahMemo.length ? surahMemo.sort((a, b) => b.ref - a.ref).map((m) => `<div class="row between"><span lang="ar"><b>${esc(surahName(+m.ref))}</b> (${m.ref})</span>
-          ${m.status === 'verified' ? `<span class="chip ok">✔ ${m.grade ?? ''}</span>` : `<span class="row"><span class="chip gold">${t(m.status)}</span>
-            <input type="number" min="0" max="100" value="90" style="width:80px;min-height:36px;padding:4px 8px" data-g="${m.ref}"><button class="btn sm primary" data-vf="${m.ref}">${t('verify')}</button></span>`}</div>`).join('')
-          : '<p class="muted small">—</p>'}
-        ${hadMemo.length ? `<h3 style="margin-top:8px">🌿 ${t('hadith')}</h3>${hadMemo.map((m) => `<div class="row between"><a href="#/hadith/${esc(m.ref)}">#${esc(m.ref)}</a>${m.status === 'verified' ? '<span class="chip ok">✔</span>' : `<button class="btn sm" data-vh="${esc(m.ref)}">${t('verify')}</button>`}</div>`).join('')}` : ''}
-      </div>
-      <div class="card stack"><h3>🕒 ${t('lastActivity')}</h3>
-        ${timeline.length ? timeline.map((x) => `<div class="small row between"><span>${x.txt}</span><span class="tiny muted">${fmtDate(x.d)}</span></div>`).join('') : '<p class="muted small">—</p>'}</div>
-    </div>
-    <div class="row"><a class="btn" href="#/supervisor">→ ${t('students')}</a><button class="btn" id="unl" style="color:var(--red)" lang="ar">إلغاء الربط</button></div>
-  </div>`;
-
-  const dlg = app.querySelector('#dlg'); let evStage = null;
-  app.querySelectorAll('[data-ev]').forEach((b) => b.onclick = () => { evStage = b.dataset.ev; app.querySelector('#dlg-t').textContent = `${t('evaluate')}: ${stageTitle(evStage, 'ar')}`; dlg.showModal(); });
-  dlg.addEventListener('close', async () => {
-    if (dlg.returnValue !== 'ok' || !evStage) return;
-    const sc = Math.max(0, Math.min(100, +app.querySelector('#sc').value || 0));
-    try { await S.db.addEvaluation(id, evStage, sc, app.querySelector('#ps').checked, app.querySelector('#nt').value.trim()); toast('✓'); student(app, id); }
-    catch (e) { toast(e.message); }
-  });
-  app.querySelectorAll('[data-vf]').forEach((b) => b.onclick = async () => {
-    const ref = b.dataset.vf, grade = +app.querySelector(`[data-g="${ref}"]`).value || null;
-    try { await S.db.verifyMemo(id, 'surah', ref, grade); toast('✔'); student(app, id); } catch (e) { toast(e.message); }
-  });
-  app.querySelectorAll('[data-vh]').forEach((b) => b.onclick = async () => { try { await S.db.verifyMemo(id, 'hadith', b.dataset.vh, null); student(app, id); } catch (e) { toast(e.message); } });
-  app.querySelector('#unl').onclick = async () => { if (!confirm('إلغاء ربط هذا الطالب بك؟')) return; await S.db.unlinkStudent(id); location.hash = '#/supervisor'; };
 }
 
 // ---------------------------------------------------------------- بنك الأسئلة

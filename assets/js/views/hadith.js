@@ -33,7 +33,7 @@ export async function list(app, cat, pageStr = '1') {
 export async function one(app, id) {
   app.innerHTML = loading();
   const h = await HE.one(hl(), id);
-  const memo = S.me ? await S.db.memo() : [];
+  const memo = S.me?.role === 'student' ? await S.db.memo() : [];
   const ms = memo.find((m) => m.kind === 'hadith' && m.ref === String(id))?.status;
   const list = (a) => Array.isArray(a) && a.length ? `<ul class="steps">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
   app.innerHTML = `${pageHead(`<span dir="${dir()}" lang="${S.lang}" translate="no">${esc(h.title)}</span>`)}
@@ -44,7 +44,7 @@ export async function one(app, id) {
       <p class="small"><span class="chip">${esc(h.grade || '')}</span> <span class="muted">${esc(h.attribution || '')}</span></p>
     </div>
     ${h.explanation ? `<div class="card stack" dir="${dir()}" lang="${S.lang}" translate="no"><h3>${t('explanation')}</h3><p>${esc(h.explanation)}</p>${list(h.hints)}</div>` : ''}
-    ${S.me ? `<div class="card row between"><span>${ms === 'verified' ? '✔ ' + t('verified') : ms === 'memorized' ? '⭐ ' + t('memorized') : t('memorize')}</span>
+    ${S.me?.role === 'student' ? `<div class="card row between"><span>${ms === 'verified' ? '✔ ' + t('verified') : ms === 'memorized' ? '⭐ ' + t('memorized') : t('memorize')}</span>
       <button class="btn sm primary" id="hm">⭐ ${t('memorized')}</button></div>` : ''}
     ${cred(id)}
   </div>`;

@@ -1,10 +1,10 @@
 // نافذة الطالب: لوحة الرحلة، المحطة، المادة، الاختبار
 import { CONFIG } from '../config.js';
 import { IH, QE, HE, ihTypeIcon, attachmentKind } from '../api.js';
-import { S, esc, toast, confetti, reveal, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
+import { S, esc, toast, confetti, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
 import { STAGES, surahName, allStageSurahs } from '../curriculum.js';
 import { t, stageTitle, stageDescAr } from '../i18n.js';
-import { pageHead, needLogin, journeyHTML, drawJourney, refsSlot, fillRefs, qLangDir, ayahMark } from './components.js';
+import { pageHead, needLogin, refsSlot, fillRefs, qLangDir, ayahMark } from './components.js';
 
 const L = () => CONFIG.languages[S.lang];
 const stageById = (id) => STAGES.find((s) => s.id === id);
@@ -12,56 +12,16 @@ const stageOfItem = (id) => STAGES.find((s) => Object.values(s.ih).some((a) => a
 
 async function myProgress() { return computeProgress(S.lang, await loadStudentData(S.me.id)); }
 
-// ---------------------------------------------------------------- لوحة الطالب
-export async function dashboard(app) {
-  if (!S.me) return needLogin();
-  app.innerHTML = loading();
-  const P = await myProgress();
-  const cur = P.stages[P.current];
-  const next = cur.tasks.find((x) => !P.done.has(x.key));
-  const nextHref = next ? (next.kind === 'read' ? `#/item/${next.id}` : `#/quran/${next.id}`) : `#/quiz/${cur.stage.id}`;
-  const nextLabel = next ? (next.kind === 'read' ? '📖 ' + t('read') : `🧠 ${t('memorize')} — ${surahName(next.id)}`) : '✅ ' + t('quiz');
-  const memo = [...P.done].filter((k) => k.startsWith('quran:')).length;
-  const isSup = ['supervisor', 'admin'].includes(S.me.role);
-  app.innerHTML = `
-  <section class="hero pattern"><div class="wrap" style="grid-template-columns:1fr;padding-block:30px 40px">
-    <div class="dash-hero">
-      <div class="ring" style="--p:${P.overall};--size:140px"><b>${P.overall}<small>%</small></b></div>
-      <div class="stack">
-        <h1 style="font-size:clamp(1.4rem,3.6vw,2.1rem)">${t('welcome')}، ${esc(S.me.full_name || '')}</h1>
-        <p style="opacity:.9">${t('currentStage')}: <b>${cur.stage.icon} ${esc(stageTitle(cur.stage.id))}</b> (${P.current + 1}/12)</p>
-        <div class="row">
-          <a class="btn gold" href="${nextHref}">${nextLabel} ←</a>
-          <a class="btn ghost" style="color:#fff;border-color:rgb(255 255 255 / .4)" href="#/stage/${cur.stage.id}">${t('stage')} ${P.current + 1}</a>
-          ${isSup ? `<a class="btn ghost" style="color:#fff;border-color:rgb(255 255 255 / .4)" href="#/supervisor">${t('supervisor')}</a>` : ''}
-        </div>
-      </div>
-    </div>
-  </div></section>
-  <div class="wrap" style="padding-top:22px">
-    <div class="stats reveal">
-      <div class="stat"><b>${P.stages.filter((s) => s.complete).length}/12</b><span>${t('stages')}</span></div>
-      <div class="stat"><b>${P.avg ?? '—'}</b><span>${t('avgScore')}</span></div>
-      <div class="stat"><b>${memo}</b><span>${t('memoSurahs')}</span></div>
-      <div class="stat"><b>${P.done.size}</b><span>${t('done')}</span></div>
-    </div>
-    <h2 style="margin:28px 0 14px">${t('stages')}</h2>
-    ${journeyHTML(P)}
-    ${!isSup ? `<p class="small muted" style="margin-top:18px">${t('linkCode')}: <a href="#/profile">${t('link')}</a></p>` : ''}
-  </div>`;
-  reveal(app); drawJourney(app, P.current);
-}
-
 // ---------------------------------------------------------------- صفحة المحطة
 export async function stage(app, id) {
   const st = stageById(id); if (!st) return '404';
   const idx = STAGES.indexOf(st);
   const lang = S.lang;
   app.innerHTML = loading();
-  const P = S.me ? await myProgress() : null;
+  const P = S.me?.role === 'student' ? await myProgress() : null;
   const sp = P?.stages[idx];
   const ids = st.ih[lang] || [];
-  const memo = S.me ? await S.db.memo() : [];
+  const memo = S.me?.role === 'student' ? await S.db.memo() : [];
   const memoOf = (n) => memo.find((m) => m.kind === 'surah' && m.ref === String(n))?.status;
 
   app.innerHTML = `
@@ -151,7 +111,7 @@ export async function item(app, id) {
   app.innerHTML = loading();
   const it = await IH.item(id, L().ih);
   const st = stageOfItem(id);
-  const P = S.me ? await myProgress() : null;
+  const P = S.me?.role === 'student' ? await myProgress() : null;
   const done = P?.done.has('ih:' + id);
   const att = (it.attachments || []).sort((a, b) => a.order - b.order);
   const by = (it.prepared_by || []).filter((p) => p.title).map((p) => `${esc(p.title)}${p.kind ? ` <span class="tiny muted">(${esc(p.kind)})</span>` : ''}`).join(' · ');
@@ -170,7 +130,7 @@ export async function item(app, id) {
       return `<div class="attach"><span>📎 ${esc(a.description || a.extension_type)}</span><a class="btn sm" href="${u}" target="_blank" rel="noopener">${t('open')}</a></div>`;
     }).join('')}</div>
     <p class="src">${t('source')}: <a href="${IH.pageUrl(id, L().ih)}" target="_blank" rel="noopener">IslamHouse.com</a> — #${esc(id)}. يُعرض كما هو دون تعديل.</p>
-    ${S.me ? `<div class="row"><button class="btn ${done ? 'done' : 'primary'}" id="mk">${done ? '✓ ' + t('done') : t('markDone')}</button>
+    ${S.me?.role === 'student' ? `<div class="row"><button class="btn ${done ? 'done' : 'primary'}" id="mk">${done ? '✓ ' + t('done') : t('markDone')}</button>
       ${st ? `<a class="btn" href="#/stage/${st.id}">${st.icon} ${esc(stageTitle(st.id))}</a>` : ''}</div>` : ''}
   </div>`;
   app.querySelector('#mk')?.addEventListener('click', async (e) => {
@@ -186,6 +146,7 @@ const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { co
 
 export async function quiz(app, id) {
   if (!S.me) return needLogin();
+  const practice = S.me.role !== 'student';   // المشرف يجرّب الاختبار دون حفظ
   const st = stageById(id), idx = STAGES.indexOf(st), lang = S.lang, key = S.qKey;
   app.innerHTML = loading();
   // مجموعة الآيات: سور هذه المحطة أولًا ثم ما قبلها (لتنويع الخيارات)
@@ -236,7 +197,7 @@ export async function quiz(app, id) {
     });
   };
   const finish = async () => {
-    const score = await S.db.saveQuiz(id, correct, Qs.length, details);
+    const score = practice ? Math.round((correct / Qs.length) * 100) : await S.db.saveQuiz(id, correct, Qs.length, details);
     const pass = score >= CONFIG.passScore;
     if (pass) confetti();
     app.innerHTML = `${pageHead(`${t('result')}: ${esc(stageTitle(id))}`)}

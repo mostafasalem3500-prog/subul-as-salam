@@ -6,7 +6,12 @@ import { setUiLang, uiDir, getUiLang } from './i18n.js';
 export const S = {
   db: null,
   me: null,
-  get lang() { return this.me?.lang || localStorage.getItem('subul-lang') || CONFIG.defaultLang; },
+  // لغة العرض: الطالب يرى لغة تعلّمه دائمًا؛ المشرف والزائر يتنقلان بين صفحات اللغات بحرية
+  get lang() {
+    const v = localStorage.getItem('subul-lang');
+    const L = this.me?.role === 'student' ? this.me.lang : (v || this.me?.lang);
+    return CONFIG.languages[L] ? L : CONFIG.defaultLang;
+  },
   set lang(v) { localStorage.setItem('subul-lang', v); },
   get qKey() { const L = CONFIG.languages[this.lang]; const k = localStorage.getItem('subul-qkey-' + this.lang); return L.quran.includes(k) ? k : L.quran[0]; },
   set qKey(v) { localStorage.setItem('subul-qkey-' + this.lang, v); },
@@ -62,7 +67,7 @@ export function parseRef(r) {
 }
 
 // -------- حساب التقدّم: نفس المنطق للطالب والمشرف --------
-export function computeProgress(lang, { progress = [], quizzes = [], evals = [], memo = [] }) {
+export function computeProgress(lang, { progress = [], quizzes = [], evals = [], memo = [], assignments = [] }) {
   const done = new Set(progress.map((p) => p.item_key));
   memo.filter((m) => m.kind === 'surah' && m.status !== 'learning').forEach((m) => done.add('quran:' + m.ref));
   const stages = STAGES.map((st) => {
@@ -75,8 +80,11 @@ export function computeProgress(lang, { progress = [], quizzes = [], evals = [],
     const total = tasks.length + 1;
     const pct = Math.round(((doneTasks + (quizOk ? 1 : 0)) / total) * 100);
     const complete = (ev && ev.passed) || pct === 100;
-    const scores = [bestQuiz, ev?.score].filter((x) => x !== null && x !== undefined);
-    return { stage: st, tasks, doneTasks, bestQuiz, eval: ev, pct, complete, grade: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null };
+    // اختبارات المشرف المرتبطة بالمحطة (بعد تصحيحها) تدخل في درجة المحطة
+    const asg = assignments.filter((a) => a.stage_id === st.id && a.submission?.score != null).map((a) => a.submission.score);
+    const asgAvg = asg.length ? Math.round(asg.reduce((a, b) => a + b, 0) / asg.length) : null;
+    const scores = [bestQuiz, ev?.score, asgAvg].filter((x) => x !== null && x !== undefined);
+    return { stage: st, tasks, doneTasks, bestQuiz, eval: ev, asgAvg, pct, complete, grade: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null };
   });
   const currentIdx = Math.max(0, stages.findIndex((x) => !x.complete));
   const allDone = stages.every((x) => x.complete);
@@ -88,8 +96,8 @@ export function computeProgress(lang, { progress = [], quizzes = [], evals = [],
 
 export async function loadStudentData(id) {
   const db = S.db;
-  const [progress, quizzes, evals, memo] = await Promise.all([db.progress(id), db.quizzes(id), db.evaluations(id), db.memo(id)]);
-  return { progress, quizzes, evals, memo };
+  const [progress, quizzes, evals, memo, assignments] = await Promise.all([db.progress(id), db.quizzes(id), db.evaluations(id), db.memo(id), db.assignments(id)]);
+  return { progress, quizzes, evals, memo, assignments };
 }
 
 // تحميل ملفات «رفيق الداعية» (JSON) عند الحاجة
@@ -101,3 +109,12 @@ export async function rafiq(name) {
 // نقاط نبّه المراجعون أنها تحتاج مراجعة طالب علم (من سجل مشروع رفيق الداعية)
 export const RAFIQ_REVIEW = new Set(['f22', 'f25', 'f40', 'f48', 'f26', 'f27', 'f28', 'f37',
   'mc167', 'md008', 'md121', 'md095', 'md141', 'mb128', 'mb133', 'mb170', 'mb160', 't14', 't18']);
+
+export const isSup = () => ['supervisor', 'admin'].includes(S.me?.role);
+// مدة نسبية قصيرة: «قبل 5 د»
+export const timeShort = (d) => {
+  const m = Math.floor((Date.now() - new Date(d)) / 6e4);
+  if (m < 1) return 'الآن'; if (m < 60) return `${m} د`; const h = Math.floor(m / 60); if (h < 24) return `${h} س`;
+  return new Date(d).toLocaleDateString('ar-SA-u-nu-latn', { day: 'numeric', month: 'short' });
+};
+export const linkify = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');

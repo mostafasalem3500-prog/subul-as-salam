@@ -27,7 +27,7 @@ export async function reader(app, nStr) {
   const rows = await QE.sura(S.qKey, n);
   let bism = '';
   if (n !== 1 && n !== 9) { try { bism = (await QE.aya(S.qKey, 1, 1)).arabic_text; } catch { /* اختياري */ } }
-  const memo = S.me ? await S.db.memo() : [];
+  const memo = S.me?.role === 'student' ? await S.db.memo() : [];
   const ms = memo.find((m) => m.kind === 'surah' && m.ref === String(n))?.status;
   const stage = STAGES.find((s) => s.quran.includes(n));
 
@@ -51,7 +51,7 @@ export async function reader(app, nStr) {
       <div class="tools"><button class="btn sm" data-play="${r.aya}">▶ ${r.aya}</button></div>
     </div>`).join('')}</div>
     <p class="src">النص العثماني والترجمة من <a href="${QE.pageUrl(S.qKey, n)}" target="_blank" rel="noopener">QuranEnc.com</a> — ${esc(S.qKey)} · التلاوة: everyayah.com (${esc(CONFIG.api.audio[S.reciter])})</p>
-    ${S.me ? `<div class="card row between"><span>${ms === 'verified' ? '✔ ' + t('verified') : ms === 'memorized' ? '⭐ ' + t('memorized') : t('memorize')}</span>
+    ${S.me?.role === 'student' ? `<div class="card row between"><span>${ms === 'verified' ? '✔ ' + t('verified') : ms === 'memorized' ? '⭐ ' + t('memorized') : t('memorize')}</span>
       <span class="row"><button class="btn sm" id="m-learn">${t('learning')}</button><button class="btn sm primary" id="m-done">⭐ ${t('memorized')}</button></span></div>` : ''}
     <div class="row between">${n > 1 ? `<a class="btn" href="#/quran/${n - 1}">→ ${esc(surahName(n - 1))}</a>` : '<span></span>'}${n < 114 ? `<a class="btn" href="#/quran/${n + 1}">${esc(surahName(n + 1))} ←</a>` : ''}</div>
   </div>`;

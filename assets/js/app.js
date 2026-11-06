@@ -15,13 +15,18 @@ import * as library from './views/library.js';
 import * as dawah from './views/dawah.js';
 import * as sup from './views/supervisor.js';
 import sources from './views/sources.js';
+import hub from './views/hub.js';
+import * as sp from './views/studentpage.js';
 
 const routes = [
   [/^\/?$/, landing],
   [/^\/login$/, auth.login],
   [/^\/signup$/, auth.signup],
   [/^\/profile$/, auth.profile],
-  [/^\/learn$/, learn.dashboard],
+  [/^\/(sw|rw|es|en)$/, hub],
+  [/^\/me(?:\/(path|follow|chat|tests))?$/, sp.mePage],
+  [/^\/learn$/, () => { location.hash = '#/me'; }],
+  [/^\/join\/(\w+)$/, auth.join],
   [/^\/stage\/(s\d+)$/, learn.stage],
   [/^\/item\/(\d+)$/, learn.item],
   [/^\/quiz\/(s\d+)$/, learn.quiz],
@@ -33,18 +38,28 @@ const routes = [
   [/^\/library(?:\/(\w+))?(?:\/(\d+))?$/, library.browse],
   [/^\/dawah(?:\/(\w+))?(?:\/([\w-]+))?$/, dawah.corner],
   [/^\/supervisor$/, sup.dashboard],
-  [/^\/supervisor\/student\/([\w-]+)$/, sup.student],
+  [/^\/supervisor\/student\/([\w-]+)(?:\/(path|follow|chat|tests))?$/, sp.supStudentPage],
   [/^\/supervisor\/questions(?:\/(s\d+))?$/, sup.questions],
   [/^\/admin$/, sup.admin],
   [/^\/sources$/, sources],
 ];
 
+let unreadBadge = 0;
+async function refreshBadge() {
+  if (!S.me) { unreadBadge = 0; return; }
+  const u = await S.db.unread().catch(() => []);
+  const n = u.length; if (n !== unreadBadge) { unreadBadge = n; renderNav(); }
+}
+
 function renderNav() {
   const me = S.me, isSup = ['supervisor', 'admin'].includes(me?.role);
+  const L = CONFIG.languages[S.lang];
   const links = [
-    ['#/', t('home')], ['#/learn', t('learn')], ['#/quran', t('quran')], ['#/hadith', t('hadith')],
+    ['#/', t('home')], [`#/${S.lang}`, `🌍 ${esc(L?.name || '')}`],
+    ...(me?.role === 'student' ? [['#/me', t('myPage') + (unreadBadge ? ` <span class="chip red tiny">${unreadBadge}</span>` : '')]] : []),
+    ['#/quran', t('quran')], ['#/hadith', t('hadith')],
     ['#/library', t('library')], ['#/dawah', t('dawah')],
-    ...(isSup ? [['#/supervisor', t('supervisor')]] : []),
+    ...(isSup ? [['#/supervisor', t('supervisor') + (unreadBadge ? ` <span class="chip red tiny">${unreadBadge}</span>` : '')]] : []),
     ...(me?.role === 'admin' ? [['#/admin', t('admin')]] : []),
     me ? ['#/profile', '👤 ' + esc(me.full_name || me.email.split('@')[0])] : ['#/login', t('login')],
   ];
@@ -96,17 +111,30 @@ export async function render() {
   app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card">404 — <a href="#/">${t('home')}</a></div></div>`;
 }
 
+// رابط الدعوة #/join/CODE: يُحفظ الرمز حتى يدخل الطالب ثم يُرسل طلب الربط تلقائيًّا
+async function processJoin() {
+  const code = localStorage.getItem('subul-join');
+  if (!code || !S.me) return;
+  localStorage.removeItem('subul-join');
+  if (S.me.role !== 'student') return;
+  const r = await S.db.linkWithCode(code).catch(() => 'error');
+  toast(r === 'pending' ? t('sentRequest') : r === 'active' ? t('linked') + ' ✓' : 'الرمز غير صحيح', 5000);
+}
+
 async function boot() {
   S.db = await createDB();
   S.me = await S.db.init();
   applyUi();
   if (S.db.mode === 'local') { const b = $('#demo-bar'); b.textContent = t('demo'); b.classList.remove('hidden'); }
-  S.db.onChange((me) => {
+  S.db.onChange(async (me) => {
     const was = S.me?.id; S.me = me; applyUi();
-    if (was !== me?.id) { if (me && /^#\/(login|signup)?$/.test(location.hash || '#/')) location.hash = ['supervisor', 'admin'].includes(me.role) ? '#/supervisor' : '#/learn'; else render(); }
+    if (me) await processJoin();
+    if (was !== me?.id) { if (me && /^#\/(login|signup)?$/.test(location.hash || '#/')) location.hash = ['supervisor', 'admin'].includes(me.role) ? '#/supervisor' : '#/me'; else render(); }
   });
   $('#burger').onclick = () => { const n = $('#nav'); n.classList.toggle('open'); $('#burger').setAttribute('aria-expanded', n.classList.contains('open')); };
   addEventListener('hashchange', render);
+  if (S.me) await processJoin();
+  setInterval(refreshBadge, 30000); refreshBadge();
   await render();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }

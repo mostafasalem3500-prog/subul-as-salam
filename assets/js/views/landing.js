@@ -1,10 +1,9 @@
 import { CONFIG } from '../config.js';
 import { IH, QE } from '../api.js';
-import { S, esc, reveal, applyUi } from '../core.js';
+import { S, esc, reveal } from '../core.js';
 import { t } from '../i18n.js';
 import { CYCLE } from '../curriculum.js';
 import { journeyHTML, drawJourney, ayahMark, qLangDir } from './components.js';
-import { render } from '../app.js';
 
 const CYCLE_IC = { read: '📖', listen: '🎧', memorize: '🧠', apply: '🤲', assess: '✅' };
 const CYCLE_AR = {
@@ -28,7 +27,7 @@ export default async function landing(app) {
         <p class="lead">${t('tagline')}</p>
         <div class="verse" id="hero-verse"><div class="skeleton" style="height:60px;opacity:.3"></div></div>
         <div class="cta">
-          ${S.me ? `<a class="btn gold" href="#/learn">${t('continue')} ←</a>` : `<a class="btn gold" href="#/signup">${t('start')}</a><a class="btn ghost" style="color:#fff;border-color:rgb(255 255 255 / .4)" href="#/login">${t('login')}</a>`}
+          ${S.me ? `<a class="btn gold" href="#/me">${t('continue')} ←</a>` : `<a class="btn gold" href="#/signup">${t('start')}</a><a class="btn ghost" style="color:#fff;border-color:rgb(255 255 255 / .4)" href="#/login">${t('login')}</a>`}
         </div>
       </div>
       <div class="lang-cards" id="lang-cards">
@@ -92,13 +91,10 @@ export default async function landing(app) {
   reveal(app);
   drawJourney(app);
 
-  // اختيار اللغة
-  app.querySelectorAll('.lang-card').forEach((b) => b.onclick = async () => {
+  // اختيار اللغة → صفحة اللغة الأساسية
+  app.querySelectorAll('.lang-card').forEach((b) => b.onclick = () => {
     const l = b.dataset.l; if (!CONFIG.languages[l].enabled) return;
-    S.lang = l;
-    if (S.me) await S.db.updateMe({ lang: l });
-    localStorage.removeItem('subul-ui'); applyUi(); render();
-    location.hash = S.me ? '#/learn' : '#/signup';
+    location.hash = '#/' + l;
   });
 
   // الآية (المائدة 16) من QuranEnc
