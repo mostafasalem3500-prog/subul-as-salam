@@ -32,6 +32,9 @@ export const CONFIG = {
   defaultLang: 'sw',
 
   // ---- مصادر المحتوى ----
+  // وسيط المصادر على استضافة PHP (Hostinger). على GitHub Pages يُتجاهل تلقائيًّا.
+  proxy: 'api.php',
+
   api: {
     islamhouse: 'https://api3.islamhouse.com/v3/paV29H2gm56kvLPy',
     quranenc: 'https://quranenc.com/api/v1',

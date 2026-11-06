@@ -1,0 +1,23 @@
+# سُبُل السلام — إعدادات Apache (Hostinger)
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  <FilesMatch "\.(js|css|svg|json|webmanifest)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+  <FilesMatch "^(sw\.js|index\.html)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .js .mjs
+</IfModule>
+
+# ملفات التطوير لا تُخدم للزوار
+RedirectMatch 404 ^/(\.git|scripts|supabase|node_modules)(/|$)
+RedirectMatch 404 ^/package\.json$

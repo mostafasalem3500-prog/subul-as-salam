@@ -8,6 +8,7 @@ import { BASES, mirrorPath } from './mirror.js';
 const mem = new Map();
 const LS_PREFIX = 'subul-cache:';
 const TTL = 1000 * 60 * 60 * 24 * 3; // 3 أيام
+let proxyDown = false;
 const liveBlocked = new Set(JSON.parse(sessionStorage.getItem('subul-blocked') || '[]'));
 
 function lsGet(url) {
@@ -41,6 +42,11 @@ export async function getJSON(url) {
       // TypeError = غالبًا CORS أو انقطاع؛ نتخطّى البث المباشر لهذا المضيف في هذه الجلسة
       if (e instanceof TypeError) { liveBlocked.add(host); sessionStorage.setItem('subul-blocked', JSON.stringify([...liveBlocked])); }
     }
+  }
+  // وسيط PHP على الاستضافة (Hostinger): يتجاوز منع CORS ويخزّن نسخة مؤقتة
+  if (!data && CONFIG.proxy && !proxyDown) {
+    try { data = await timed(new URL(`${CONFIG.proxy}?u=${encodeURIComponent(url)}`, document.baseURI).href, 25000); }
+    catch (e) { err = e; if (e instanceof SyntaxError) proxyDown = true; }   // لا PHP هنا (مثل GitHub Pages)
   }
   if (!data) {
     const p = mirrorPath(url);
