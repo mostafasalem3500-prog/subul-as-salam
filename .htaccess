@@ -21,3 +21,10 @@ DirectoryIndex index.html
 # ملفات التطوير لا تُخدم للزوار
 RedirectMatch 404 ^/(\.git|scripts|supabase|node_modules)(/|$)
 RedirectMatch 404 ^/package\.json$
+
+# الملفات البرمجية تُعاد مراجعتها مع الخادم في كل زيارة (تحديثات فورية بعد كل نشر)
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|mjs|css|html|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
