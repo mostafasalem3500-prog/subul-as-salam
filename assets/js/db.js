@@ -170,7 +170,7 @@ function localBackend() {
   const pub = (u) => u && ({ id: u.id, full_name: u.full_name, email: u.email, lang: u.lang, country: u.country, role: u.role, supervisor_code: u.supervisor_code });
 
   function overview(u) {
-    const pr = db.progress.filter((p) => p.student_id === u.id && !['prayer', 'daily'].includes(p.kind));
+    const pr = db.progress.filter((p) => p.student_id === u.id && !['prayer', 'daily', 'lang'].includes(p.kind));
     return { ...u, done_items: pr.length, last_activity: pr.map((p) => p.completed_at).sort().pop() || null };
   }
 

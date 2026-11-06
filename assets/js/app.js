@@ -20,6 +20,7 @@ import * as dawah from './views/dawah.js';
 import * as sup from './views/supervisor.js';
 import * as sp from './views/studentpage.js';
 import * as extra from './views/extra.js';
+import * as lc from './views/langcourse.js';
 import sources from './views/sources.js';
 
 // مسارات خارج الأقسام
@@ -51,6 +52,7 @@ const SCOPED = [
   [/^hadith\/(\d+)$/, hadith.one],
   [/^library(?:\/(\w+))?(?:\/(\d+))?$/, library.browse],
   [/^dawah(?:\/(\w+))?(?:\/([\w-]+))?$/, dawah.corner],
+  [/^lang(?:\/(method|cards|quiz))?(?:\/(L\d|due))?(?:\/(\d+))?$/, lc.route],
   [/^supervisor$/, sup.dashboard],
   [/^supervisor\/(cards|guide|language|material|media)$/, sup.section],
   [/^supervisor\/student\/([\w-]+)(?:\/(path|follow|chat|tests|reviews|today))?$/, sp.supStudentPage],
@@ -76,10 +78,10 @@ function renderNav() {
              [href('prayer'), t('prayerWudu')], [href('videos'), t('videos')], [href('books'), t('booksGuide')]];
   } else if (isSup()) {
     links = [[href(), '🏠'], [href('supervisor'), t('students') + badge], [href('supervisor/cards'), t('cards')], [href('supervisor/guide'), t('guide')],
-             [href('supervisor/language'), t('langLearn')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('supervisor/material'), t('material')],
+             [href('lang'), t('langLearn')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('supervisor/material'), t('material')],
              ...(me.role === 'admin' ? [['#/admin', t('admin')]] : [])];
   } else {
-    links = [[href(), '🏠'], [href('learn'), t('learnCenter')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('prayer'), t('prayerWudu')],
+    links = [[href(), '🏠'], [href('learn'), t('learnCenter')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('prayer'), t('prayerWudu')], [href('lang'), '🗣️ ' + t('langLearn')],
              [href('login'), t('login')], [href('signup'), t('signup')]];
   }
   if (me && L) links.push([href('profile'), '👤 ' + esc(me.full_name || me.email.split('@')[0])]);

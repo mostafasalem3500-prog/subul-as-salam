@@ -407,3 +407,82 @@ body[dir="ltr"] .page-head p[dir="auto"] { text-align: start; }
 
 .top .nav { order: 1; } #ui-slot { order: 2; margin-inline-start: 6px; } .top .burger { order: 3; }
 @media (max-width: 920px) { #ui-slot { margin-inline-start: auto; } .burger { margin-inline-start: 4px; } .lang-toggle span { padding: 4px 8px; font-size: .74rem; } }
+
+/* ---------- دورة اللغة (lang course) ---------- */
+.grow { flex: 1; min-width: 0; }
+.crumbs { color: var(--muted); } .crumbs a { text-decoration: none; }
+.tl { font-family: var(--lat); unicode-bidi: isolate; }
+.tl.big { font-size: 1.35rem; }
+.say { border: 0; background: var(--gold-soft); border-radius: 999px; width: 30px; height: 30px; display: inline-grid; place-items: center; cursor: pointer; font-size: .85rem; flex: none; vertical-align: middle; transition: transform .2s var(--ease); }
+.say:hover { transform: scale(1.12); }
+.lc-hero { background: linear-gradient(135deg, var(--green-soft), var(--gold-soft)); border: 0; }
+.lc-facts { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+.lc-facts span { background: var(--surface); border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: .9rem; display: inline-flex; gap: 6px; align-items: center; box-shadow: var(--shadow); }
+.lc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.lc-stats .card { text-align: center; display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.lc-stats .num { font-size: 1.8rem; color: var(--green-2); font-family: var(--lat); }
+.bar { display: block; height: 7px; background: var(--line); border-radius: 9px; overflow: hidden; margin-top: 6px; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--green-3), var(--gold-2)); border-radius: 9px; transition: width 1s var(--ease); }
+.lc-path { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; position: relative; }
+.lc-path::before { content: ""; position: absolute; inset-block: 20px; inset-inline-start: 31px; width: 3px; background: repeating-linear-gradient(var(--gold-2) 0 8px, transparent 8px 16px); }
+.lc-path li { position: relative; animation: lcIn .6s var(--ease) both; }
+.lc-path li:nth-child(n) { animation-delay: calc(var(--n, 0) * 60ms); }
+.lc-level { display: flex; gap: 16px; align-items: center; text-decoration: none; color: inherit; border-inline-start: 5px solid var(--c); }
+.lc-badge { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-size: 1.6rem; background: color-mix(in srgb, var(--c) 16%, var(--surface)); position: relative; z-index: 1; box-shadow: 0 0 0 4px var(--bg); }
+.lc-level h3 { margin: 4px 0 2px; font-size: 1.08rem; }
+@keyframes lcIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.lc-lesson { display: flex; gap: 14px; align-items: center; text-decoration: none; color: inherit; }
+.lc-num { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--c); font-family: var(--lat); }
+.lc-lesson.done .lc-num { background: var(--ok); }
+.lc-lesson h3 { font-size: 1rem; margin: 0; }
+.lc-goal { background: var(--sky-soft); color: var(--sky); padding: 10px 14px; border-radius: var(--r-sm); }
+.lc-tipbox { background: var(--gold-soft); border-inline-start: 4px solid var(--gold-2); padding: 12px 14px; border-radius: var(--r-sm); }
+.lc-ex { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.lc-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 12px; }
+.lc-row .ar { margin-inline-start: auto; color: var(--muted); font-size: .92rem; text-align: end; }
+.lc-tablewrap { overflow-x: auto; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); }
+.lc-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.lc-table th, .lc-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: start; vertical-align: middle; }
+.lc-table thead th { background: var(--green); color: #fff; font-weight: 700; }
+.lc-table th, .lc-table td { white-space: normal; }
+@media (max-width: 560px) { .lc-table { font-size: .86rem; } .lc-table th, .lc-table td { padding: 7px 8px; } }
+.lc-table tbody tr:nth-child(even) { background: var(--surface-2); }
+.lc-table td b.tl { color: var(--green-2); }
+.lc-dlg { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--surface-2); border-radius: var(--r); }
+.lc-bubble { display: flex; gap: 10px; align-items: flex-start; max-width: 88%; }
+.lc-bubble > div { background: var(--surface); border-radius: 14px; padding: 9px 13px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
+.lc-bubble.b { align-self: flex-end; flex-direction: row-reverse; }
+.lc-bubble.b > div { background: var(--green-soft); }
+.lc-bubble .who { font-size: 1.4rem; }
+.lc-bubble .say { align-self: flex-start; }
+.lc-verse mark, .lc-term mark { background: var(--gold-bright); color: #1b1404; padding: 0 3px; border-radius: 4px; }
+.lc-steps { counter-reset: s; list-style: none; padding: 0; display: grid; gap: 10px; }
+.lc-steps li { counter-increment: s; display: flex; flex-direction: column; padding: 10px 14px 10px 14px; padding-inline-start: 54px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.lc-steps li::before { content: counter(s); position: absolute; inset-inline-start: 12px; top: 10px; width: 30px; height: 30px; border-radius: 50%; background: var(--gold-2); color: #1b1404; display: grid; place-items: center; font-weight: 800; }
+.lc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lc-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 6px; }
+.lc-chip small { color: var(--muted); }
+.lc-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; background: var(--surface-2); }
+.lc-term { display: flex; flex-direction: column; gap: 8px; }
+.lc-term .ctx .quran-ar { font-size: 1.1rem; line-height: 2; }
+.lc-flash { min-height: 230px; } .lc-flash .in { min-height: 230px; }
+.lc-flash .face { font-size: 1.3rem; }
+.lc-tip .ic { font-size: 1.7rem; }
+.lc-tip h3 { margin: 6px 0 2px; font-size: 1.02rem; }
+.lc-road { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.lc-road > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; display: flex; flex-direction: column; gap: 2px; border-top: 4px solid color-mix(in srgb, var(--green-3) calc(100% - var(--i) * 12%), var(--gold-2)); animation: lcIn .5s var(--ease) both; animation-delay: calc(var(--i) * 80ms); }
+.lc-road b { font-family: var(--lat); color: var(--green-2); font-size: 1.1rem; }
+.lc-road small { color: var(--muted); }
+.lc-band { display: flex; align-items: center; gap: 18px; margin-top: 22px; padding: 20px 22px; border-radius: var(--r); text-decoration: none; color: #fff; background: linear-gradient(120deg, var(--green), #155e4b 55%, #6b5212); box-shadow: var(--shadow-lg); flex-wrap: wrap; }
+.lc-band b { display: block; font-size: 1.25rem; margin: 2px 0; }
+.lc-band small { display: block; opacity: .85; }
+.lc-band .kicker { color: var(--gold-bright); }
+.lc-band-ic { font-size: 2.6rem; animation: lcFloat 3s ease-in-out infinite; }
+.lc-band-steps { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.lc-band-steps i { font-style: normal; font-family: var(--lat); font-size: .78rem; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: rgb(255 255 255 / .14); }
+.lc-band-steps i:nth-child(n) { animation: lcGlow 4.2s ease-in-out infinite; }
+.lc-band-steps i:nth-child(2) { animation-delay: .6s } .lc-band-steps i:nth-child(3) { animation-delay: 1.2s } .lc-band-steps i:nth-child(4) { animation-delay: 1.8s }
+.lc-band-steps i:nth-child(5) { animation-delay: 2.4s } .lc-band-steps i:nth-child(6) { animation-delay: 3s } .lc-band-steps i:nth-child(7) { animation-delay: 3.6s }
+@keyframes lcFloat { 50% { transform: translateY(-6px) rotate(-4deg); } }
+@keyframes lcGlow { 0%, 20%, 100% { background: rgb(255 255 255 / .14); color: #fff; } 10% { background: var(--gold-bright); color: #1b1404; } }
+@media (prefers-reduced-motion: reduce) { .lc-path li, .lc-road > div, .lc-band-ic, .lc-band-steps i { animation: none; } }

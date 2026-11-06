@@ -73,6 +73,12 @@ export default async function langHome(app) {
         ${feat('📝', t('tests'), `${t('questions')} · ${t('chat')}`)}
       </section>
     </div>
+    ${student ? '' : `<a class="lc-band reveal" href="${href('lang')}" dir="rtl" lang="ar">
+      <span class="lc-band-ic">🗣️</span>
+      <span class="grow"><span class="kicker">للمشرف والداعية</span><b>تعلّم ${esc(L.ar)} من الحروف إلى الإتقان</b>
+        <small>الأصوات · التحيات · القواعد · محادثات الدعوة · المصطلحات الشرعية من الترجمة المعتمدة · بطاقات مراجعة واختبارات</small>
+        <span class="lc-band-steps" dir="ltr">${['Pre-A1', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((c) => `<i>${c}</i>`).join('')}</span></span>
+      <span class="btn gold">ابدأ ←</span></a>`}
 
     <section class="stack reveal"><div class="sec-head"><div><span class="kicker">${t('curriculum')}</span><h2>${t('stages')}</h2></div>
       <a class="btn" href="${href('learn')}">${t('learnCenter')} ←</a></div>${journeyHTML(null)}</section>

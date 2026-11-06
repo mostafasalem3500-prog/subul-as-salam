@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { S, esc, toast, ago, computeProgress, loadStudentData, loading, reveal, isSup, href, rafiq } from '../core.js';
 import { QE, HE } from '../api.js';
 import { SURAHS, surahName } from '../curriculum.js';
+import { getCourse } from './langcourse.js';
 import { DAWAH_WORDS } from '../dawah-words.js';
 import { messageBank } from './hub.js';
 import { STAGES } from '../curriculum.js';
@@ -169,7 +170,13 @@ export async function section(app, which) {
 
   if (which === 'language') {
     const words = DAWAH_WORDS[LG]?.cards.length || 0;
+    const C = await getCourse(LG).catch(() => null);
     app.innerHTML = head + `<div class="wrap stack" style="padding-top:8px">
+      ${C ? `<div class="sec-head" dir="rtl"><h2 lang="ar">🪜 دورة ${esc(C.ar)}: من الحروف إلى الإتقان</h2><a class="btn primary" href="${href('lang')}">افتح الدورة ←</a></div>
+      <div class="grid">${C.levels.map((l, i) => tileL(href('lang/' + l.id), l.icon, `${i + 1}. ${esc(l.t)} <span class="chip tiny" dir="ltr">${esc(l.cefr)}</span>`, `${l.lessons.length} دروس · ${esc(l.d)}`)).join('')}
+        ${tileL(href('lang/method'), '🧭', 'كيف تتعلّم اللغة؟', 'المنهج، خريطة الطريق، خطة أسبوعية')}
+        ${tileL(href('lang/cards/due'), '🔁', 'مراجعة اليوم', 'بطاقات المراجعة المتباعدة')}</div>
+      <h2>🧰 أدوات أخرى</h2>` : ''}
       <div class="grid">
         ${words ? tileL(href('dawah/words'), '🗝️', t('words'), `${words} · ${t('inContext')}`) : ''}
         ${tileL(href('quran/1'), '🔎', t('explorer'), t('explorerHint'))}

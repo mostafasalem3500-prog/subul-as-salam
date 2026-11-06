@@ -1,5 +1,5 @@
 // Service Worker — يعمل الموقع دون اتصال للصفحات التي فُتحت من قبل
-const V = 'subul-v3';
+const V = 'subul-v4';
 const SHELL = ['./', 'index.html', 'assets/css/app.css', 'assets/img/logo.svg', 'icon.svg', 'manifest.webmanifest'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
