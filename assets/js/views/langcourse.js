@@ -16,7 +16,15 @@ import { pageHead, ayahMark } from './components.js';
 import { shuffle } from './quizengine.js';
 
 const LOADERS = { sw: () => import('../langcourse/sw.js'), rw: () => import('../langcourse/rw.js'), en: () => import('../langcourse/en.js'), es: () => import('../langcourse/es.js') };
-export async function getCourse(L) { const f = LOADERS[L]; return f ? (await f()).default : null; }
+const EXTRAS = { sw: () => import('../langcourse/sw-extra.js'), rw: () => import('../langcourse/rw-extra.js') };
+const merged = {};
+export async function getCourse(L) {
+  const f = LOADERS[L]; if (!f) return null;
+  if (merged[L]) return merged[L];
+  const C = (await f()).default;
+  if (EXTRAS[L]) { const X = (await EXTRAS[L]()).default; C.levels.forEach((l) => { if (X[l.id]) l.lessons.push(...X[l.id]); }); }
+  return (merged[L] = C);
+}
 
 // ---------------------------------------------------------------- أدوات
 const ls = { get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };

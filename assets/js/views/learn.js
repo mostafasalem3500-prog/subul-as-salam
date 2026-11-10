@@ -3,14 +3,14 @@ import { CONFIG } from '../config.js';
 import { IH, HE, ihTypeIcon, attachmentKind, ytEmbed } from '../api.js';
 import { S, esc, toast, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
-import { STAGES, surahName, allStageSurahs } from '../curriculum.js';
+import { STAGES, EXTRA, surahName, allStageSurahs } from '../curriculum.js';
 import { t, stageTitle, stageDescAr } from '../i18n.js';
 import { pageHead, needLogin, refsSlot, fillRefs, qLangDir } from './components.js';
 import { videoCard, wireVideos } from './extra.js';
 
 const L = () => CONFIG.languages[S.lang];
 const stageById = (id) => STAGES.find((s) => s.id === id);
-const stageOfItem = (id) => STAGES.find((s) => Object.values(s.ih).some((a) => a.includes(+id)));
+const stageOfItem = (id) => STAGES.find((s) => Object.values(s.ih).some((a) => a.includes(+id)) || Object.values(EXTRA[s.id]?.more || {}).some((a) => a.includes(+id)));
 
 async function myProgress() { return computeProgress(S.lang, await loadStudentData(S.me.id)); }
 
@@ -23,6 +23,7 @@ export async function stage(app, id) {
   const P = S.me?.role === 'student' ? await myProgress() : null;
   const sp = P?.stages[idx];
   const ids = st.ih[lang] || [];
+  const ex = EXTRA[st.id] || {}, more = ex.more?.[lang] || [];
   const memo = S.me?.role === 'student' ? await S.db.memo() : [];
   const memoOf = (n) => memo.find((m) => m.kind === 'surah' && m.ref === String(n))?.status;
 
@@ -53,6 +54,12 @@ export async function stage(app, id) {
       }).join('')}</div>
     </section>
 
+    ${ex.ayat?.length ? `<section class="stack"><h2>✨ <span lang="ar">آيات مختارة للفهم والتدبر</span></h2>${refsSlot(ex.ayat)}</section>` : ''}
+
+    ${more.length ? `<section class="stack"><h2>➕ <span lang="ar">للاستزادة من إسلام هاوس</span> <span class="chip">${more.length}</span></h2>
+      <p class="small muted" lang="ar">مواد اختيارية (كتب ومقالات وصوتيات) لا تدخل في نسبة الإنجاز.</p>
+      <div class="grid">${more.map((i) => `<a class="card lift item" href="#/item/${i}" data-ih="${i}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}</div></section>` : ''}
+
     <section class="stack">
       <h2>🌿 ${t('hadiths')}</h2>
       <div id="hl" class="stack"><div class="skeleton" style="height:50px"></div></div>
@@ -70,7 +77,7 @@ export async function stage(app, id) {
     </div>
   </div>`;
 
-  wireVideos(app);
+  wireVideos(app); fillRefs(app);
   // بطاقات مواد إسلام هاوس
   app.querySelectorAll('[data-ih]').forEach(async (a) => {
     try {
@@ -86,7 +93,7 @@ export async function stage(app, id) {
   (async () => {
     const box = app.querySelector('#hl');
     try {
-      const r = await HE.list(L().hadeeth, st.hadith, 1, 6);
+      const r = await HE.list(L().hadeeth, st.hadith, 1 + (idx % 2), 10);
       box.innerHTML = (r.data || []).map((h) => `<a class="card lift" href="#/hadith/${h.id}" dir="${qLangDir(lang)}" lang="${lang}" style="text-decoration:none;color:inherit" translate="no">🌿 ${esc(h.title)}</a>`).join('') +
         `<a class="small" href="#/hadith/cat/${st.hadith}">${t('more')} ←</a> <span class="tiny muted">HadeethEnc.com</span>`;
     } catch { box.innerHTML = `<p class="small muted">${t('error')}</p>`; }

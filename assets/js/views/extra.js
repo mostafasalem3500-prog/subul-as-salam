@@ -5,7 +5,7 @@
 import { CONFIG } from '../config.js';
 import { IH, ihTypeIcon, attachmentKind, ytId, ytEmbed } from '../api.js';
 import { S, esc, toast, loading, reveal, isSup, href, computeProgress, loadStudentData, rafiq } from '../core.js';
-import { STAGES } from '../curriculum.js';
+import { EXTRA, STAGES } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
 import { pageHead, needLogin, verseCard } from './components.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
@@ -175,8 +175,8 @@ export async function books(app) {
   const rq = lang === 'es' ? await rafiq('BOOKS').catch(() => []) : [];
   app.innerHTML = `${pageHead('📚 ' + t('booksGuide'), `IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('library/books')}">${t('library')} ←</a>`)}
   <div class="wrap stack" style="padding-top:20px">
-    ${STAGES.map((st, i) => (st.ih[lang] || []).length || st.haramain?.[lang] ? `<section class="stack reveal"><h2>${st.icon} ${t('stage')} ${i + 1}: ${esc(stageTitle(st.id))}</h2>
-      <div class="grid">${(st.ih[lang] || []).map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}
+    ${STAGES.map((st, i) => (st.ih[lang] || []).length || (EXTRA[st.id]?.more?.[lang] || []).length || st.haramain?.[lang] ? `<section class="stack reveal"><h2>${st.icon} ${t('stage')} ${i + 1}: ${esc(stageTitle(st.id))}</h2>
+      <div class="grid">${[...(st.ih[lang] || []), ...(EXTRA[st.id]?.more?.[lang] || [])].map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}
       ${st.haramain?.[lang] ? `<a class="card lift item" href="${st.haramain[lang]}" target="_blank" rel="noopener"><span class="ic">🕋</span><span><h3>${t('haramain')}</h3><span class="desc">risala.prh.gov.sa</span></span></a>` : ''}</div></section>` : '').join('')}
     ${rq.length ? `<section class="stack"><h2>📗 دليل كتب «رفيق الداعية»</h2>
       <p class="small muted" lang="ar">مرتّبة حسب حال المحاور، مع ملاحظة المشرف بالعربية.</p>
