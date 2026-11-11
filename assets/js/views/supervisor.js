@@ -194,6 +194,7 @@ export async function section(app, which) {
     return head + `<div class="wrap stack" style="padding-top:8px"><div class="grid">
         ${tileL(href('learn'), '📖', t('learnCenter'), t('openToAll'))}
         ${tileL(href('books'), '📚', t('booksGuide'), 'IslamHouse.com')}
+        ${tileL(href('tracks'), '🧭', 'المسارات الموضوعية', '8 مسارات قراءة من IslamHouse')}
         ${tileL(href('saudi'), '🕋', 'المصادر السعودية المعتمدة', 'رسالة الحرمين · الإفتاء · الشؤون الإسلامية')}
         ${tileL(href('videos'), '🎬', t('videos'), `IslamHouse · ${t('mediaBank')}`)}
         ${tileL(href('prayer'), '💧', t('prayerWudu'), `${t('wudu')} · ${t('prayerSteps')}`)}

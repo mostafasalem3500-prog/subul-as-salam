@@ -251,7 +251,7 @@ end $$;
 create or replace view public.student_overview
 with (security_invoker = true) as
 select p.id, p.email, p.full_name, p.lang, p.country, p.created_at, p.last_seen_at,
-       (select count(*) from public.progress pr where pr.student_id = p.id and pr.kind not in ('prayer','daily','lang')) as done_items,
+       (select count(*) from public.progress pr where pr.student_id = p.id and pr.kind not in ('prayer','daily','lang','track')) as done_items,
        (select max(completed_at) from public.progress pr where pr.student_id = p.id)        as last_activity,
        (select round(avg(best)) from (select max(score) best from public.quiz_attempts q
                                        where q.student_id = p.id group by stage_id) b)     as avg_quiz,

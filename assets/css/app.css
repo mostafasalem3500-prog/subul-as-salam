@@ -486,3 +486,12 @@ body[dir="ltr"] .page-head p[dir="auto"] { text-align: start; }
 @keyframes lcFloat { 50% { transform: translateY(-6px) rotate(-4deg); } }
 @keyframes lcGlow { 0%, 20%, 100% { background: rgb(255 255 255 / .14); color: #fff; } 10% { background: var(--gold-bright); color: #1b1404; } }
 @media (prefers-reduced-motion: reduce) { .lc-path li, .lc-road > div, .lc-band-ic, .lc-band-steps i { animation: none; } }
+
+/* ---------- المسارات الموضوعية والشهادة ---------- */
+.trk { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; border-top: 5px solid var(--c); }
+.trk-ic { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 1.7rem; background: color-mix(in srgb, var(--c) 15%, var(--surface)); }
+.trk h3 { font-size: 1.05rem; margin: 4px 0 0; }
+.trk-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.trk-list li { display: flex; align-items: center; gap: 12px; }
+.trk-list li.done { background: var(--ok-soft); }
+.trk-list li.done .lc-num { background: var(--ok); }

@@ -7,6 +7,8 @@ import { IH, ihTypeIcon, attachmentKind, ytId, ytEmbed } from '../api.js';
 import { S, esc, toast, loading, reveal, isSup, href, computeProgress, loadStudentData, rafiq } from '../core.js';
 import { EXTRA, STAGES } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
+import { TRACKS, trackName } from '../tracks.js';
+import { getUiLang } from '../i18n.js';
 import { SAUDI, SAUDI_GROUPS, isHaramain, saudiCount } from '../saudi-sources.js';
 import { pageHead, needLogin, verseCard } from './components.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
@@ -177,6 +179,7 @@ export async function books(app) {
   const rq = lang === 'es' ? await rafiq('BOOKS').catch(() => []) : [];
   app.innerHTML = `${pageHead('📚 ' + t('booksGuide'), `IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('library/books')}">${t('library')} ←</a>`)}
   <div class="wrap stack" style="padding-top:20px">
+    <a class="lc-band" href="${href('tracks')}" dir="rtl" lang="ar" style="margin-top:0;background:linear-gradient(120deg,#23578a,#1c8f70)"><span class="lc-band-ic">🧭</span><span class="grow"><span class="kicker">Themed tracks</span><b>المسارات الموضوعية</b><small>خطواتي الأولى · لماذا الإسلام؟ · عيسى عليه السلام · الأسرة · المرأة · الأطفال · تزكية القلب · الآخرة</small></span><span class="btn gold">${TRACKS.filter((x) => (x.ih[lang] || []).length).length} ←</span></a>
     ${saudiCount(lang) ? `<a class="lc-band" href="${href('saudi')}" dir="rtl" lang="ar" style="margin-top:0"><span class="lc-band-ic">🕋</span><span class="grow"><span class="kicker">Saudi official sources</span><b>كتب الجهات السعودية المعتمدة</b><small>رئاسة الشؤون الدينية بالحرمين «رسالة الحرمين» · الإفتاء · وزارة الشؤون الإسلامية · كبار العلماء</small></span><span class="btn gold">${saudiCount(lang)} ←</span></a>` : ''}
     ${STAGES.map((st, i) => (st.ih[lang] || []).length || (EXTRA[st.id]?.more?.[lang] || []).length || st.haramain?.[lang] ? `<section class="stack reveal"><h2>${st.icon} ${t('stage')} ${i + 1}: ${esc(stageTitle(st.id))}</h2>
       <div class="grid">${[...(st.ih[lang] || []), ...(EXTRA[st.id]?.more?.[lang] || [])].map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}
@@ -226,4 +229,43 @@ export async function saudi(app) {
   </div>`;
   reveal(app); fillItems(app);
   app.querySelectorAll('[data-jump]').forEach((b) => b.onclick = () => app.querySelector('#sg-' + b.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+}
+
+// ---------------------------------------------------------------- المسارات الموضوعية
+const TRK = 'subul-tracks';
+const trkGet = () => { try { return new Set(JSON.parse(localStorage.getItem(TRK)) || []); } catch { return new Set(); } };
+export async function tracks(app, tid) {
+  const lang = S.lang, ui = getUiLang();
+  let done = trkGet();
+  if (S.me?.role === 'student') { (await S.db.progress().catch(() => [])).filter((r) => r.kind === 'track').forEach((r) => done.add(r.item_key)); }
+  const list = TRACKS.filter((x) => (x.ih[lang] || []).length);
+  const pct = (x) => { const a = x.ih[lang]; return Math.round(100 * a.filter((i) => done.has(`trk:${lang}:${i}`)).length / a.length); };
+  const tr = tid && list.find((x) => x.id === tid);
+  if (!tr) {
+    return `${pageHead('🧭 <span lang="ar">المسارات الموضوعية</span>', `Themed reading tracks · IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('books')}">📚 ${t('booksGuide')} ←</a>`)}
+    <div class="wrap stack" style="padding-top:16px">
+      <p class="notice small" lang="ar" dir="rtl">مسارات قراءة اختيارية بجانب المنهج: كل مسار مجموعة كتب ورسائل من IslamHouse في موضوع واحد. علّم ما قرأته لتتابع تقدّمك.</p>
+      <div class="grid">${list.map((x) => `<a class="card lift trk" href="${href('tracks/' + x.id)}" style="--c:${x.color}">
+        <span class="trk-ic">${x.icon}</span><h3 dir="auto">${esc(trackName(x, ui))}</h3>${ui !== 'ar' ? `<span class="small muted" lang="ar" dir="rtl">${esc(x.n.ar)}</span>` : ''}
+        <i class="bar"><i style="width:${pct(x)}%"></i></i><span class="tiny muted">${x.ih[lang].length} 📘 · ${pct(x)}%</span></a>`).join('')}</div>
+    </div>`;
+  }
+  const i = list.indexOf(tr), next = list[i + 1];
+  app.innerHTML = `${pageHead(`${tr.icon} <span dir="auto">${esc(trackName(tr, ui))}</span>`, `<span lang="ar">${esc(tr.n.ar)}</span> · IslamHouse.com`, `<div class="ring" style="--p:${pct(tr)};--size:84px"><b style="font-size:1.1rem">${pct(tr)}<small>%</small></b></div>`)}
+  <div class="wrap stack" style="padding-top:16px;max-width:860px">
+    <nav class="crumbs small"><a href="${href('tracks')}">🧭 <span lang="ar">المسارات</span></a> › ${esc(trackName(tr, ui))}</nav>
+    <ol class="trk-list">${tr.ih[lang].map((id, n) => { const k = `trk:${lang}:${id}`, d = done.has(k); return `<li class="card${d ? ' done' : ''}" style="--c:${tr.color}">
+      <span class="lc-num">${d ? '✓' : n + 1}</span>
+      <a class="item grow" href="${href('item/' + id)}" data-ih="${id}" style="text-decoration:none;color:inherit"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>
+      <button class="btn sm${d ? ' done' : ''}" data-k="${k}" aria-pressed="${d}">${d ? '✓' : '○'}</button></li>`; }).join('')}</ol>
+    <div class="row between"><a class="btn sm" href="${href('tracks')}">→ <span lang="ar">كل المسارات</span></a>${next ? `<a class="btn sm primary" href="${href('tracks/' + next.id)}">${next.icon} ${esc(trackName(next, ui))} ←</a>` : ''}</div>
+  </div>`;
+  fillItems(app);
+  app.querySelectorAll('[data-k]').forEach((b) => b.onclick = async () => {
+    const k = b.dataset.k, set = trkGet(), on = !done.has(k);
+    if (on) { set.add(k); done.add(k); if (S.me?.role === 'student') await S.db.markDone(k, 'track', 'track').catch(() => {}); }
+    else { set.delete(k); done.delete(k); if (S.me?.role === 'student') await S.db.unmark?.(k).catch(() => {}); }
+    localStorage.setItem(TRK, JSON.stringify([...set]));
+    tracks(app, tid);
+  });
 }

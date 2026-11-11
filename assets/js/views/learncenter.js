@@ -32,7 +32,7 @@ export default async function learnCenter(app) {
     <section class="stack reveal" id="sec-videos"><div class="sec-head"><h2>🎬 ${t('videos')}</h2><a class="btn" href="${href('videos')}">${t('more')} ←</a></div>
       ${vids.length ? `<div class="grid">${vids.map((v) => videoCard(v)).join('')}</div>` : `<p class="muted">${t('noVideos')}</p>`}</section>
 
-    <section class="stack reveal" id="sec-books"><div class="sec-head"><h2>📚 ${t('booksGuide')}</h2><span class="row"><a class="btn gold" href="${href('saudi')}">🕋 <span lang="ar">المصادر السعودية</span></a><a class="btn" href="${href('books')}">${t('more')} ←</a></span></div>
+    <section class="stack reveal" id="sec-books"><div class="sec-head"><h2>📚 ${t('booksGuide')}</h2><span class="row"><a class="btn" href="${href('tracks')}">🧭 <span lang="ar">المسارات</span></a><a class="btn gold" href="${href('saudi')}">🕋 <span lang="ar">المصادر السعودية</span></a><a class="btn" href="${href('books')}">${t('more')} ←</a></span></div>
       <div class="grid">${books.map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}</div></section>
   </div>`;
   reveal(app); drawJourney(app); wireVideos(app); fillItems(app);

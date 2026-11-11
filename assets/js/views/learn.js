@@ -172,7 +172,36 @@ export async function quiz(app, id) {
     const pass = score >= CONFIG.passScore;
     app.innerHTML = resultHTML(esc(stageTitle(id)), score, correct, total,
       `<a class="btn" href="#/stage/${id}">${t('back')}</a>` +
-      (pass && idx < 11 ? `<a class="btn primary" href="#/stage/${STAGES[idx + 1].id}">${t('stage')} ${idx + 2} ←</a>` : `<a class="btn primary" href="#/quiz/${id}">${t('tryAgain')}</a>`));
+      (pass ? `<button class="btn gold" id="cert">🏅 <span lang="ar">شهادة</span> · Certificate</button>` : '') +
+      (pass && idx < 11 ? `<a class="btn primary" href="#/stage/${STAGES[idx + 1].id}">${t('stage')} ${idx + 2} ←</a>` : pass ? '' : `<a class="btn primary" href="#/quiz/${id}">${t('tryAgain')}</a>`));
+    const cb = app.querySelector('#cert');
+    if (cb) cb.onclick = () => certificate({ name: S.me.full_name || S.me.email.split('@')[0], stage: `${idx + 1}. ${stageTitle(id)}`, stageAr: stageTitle(id, 'ar'), score, icon: st.icon });
     app.querySelectorAll('a[href^="#/"]').forEach((a) => a.setAttribute('href', `#/${S.lang}/` + a.getAttribute('href').slice(2)));
   } });
+}
+
+// ---------------------------------------------------------------- شهادة إتمام المحطة (صورة PNG تُرسم في المتصفح)
+export async function certificate({ name, stage, stageAr, score, icon }) {
+  const W = 1600, H = 1130, cv = Object.assign(document.createElement('canvas'), { width: W, height: H }), c = cv.getContext('2d');
+  await Promise.all(['700 60px "Cairo"', '60px "Amiri"', '700 40px "Plus Jakarta Sans"'].map((f) => document.fonts.load(f).catch(() => {})));
+  c.fillStyle = '#fbf8f1'; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#0b4d3c'; c.lineWidth = 14; c.strokeRect(34, 34, W - 68, H - 68);
+  c.strokeStyle = '#c9a227'; c.lineWidth = 4; c.strokeRect(62, 62, W - 124, H - 124);
+  // نجمة ثمانية في الأركان
+  const star = (x, y, r) => { c.save(); c.translate(x, y); c.strokeStyle = '#c9a227'; c.lineWidth = 3; for (let k = 0; k < 2; k++) { c.rotate(Math.PI / 4); c.strokeRect(-r, -r, 2 * r, 2 * r); } c.restore(); };
+  [[130, 130], [W - 130, 130], [130, H - 130], [W - 130, H - 130]].forEach(([x, y]) => star(x, y, 34));
+  c.textAlign = 'center'; c.direction = 'rtl';
+  c.fillStyle = '#0b4d3c'; c.font = '700 70px "Cairo"'; c.fillText(CONFIG.brand.nameAr, W / 2, 210);
+  c.direction = 'ltr'; c.fillStyle = '#8a6714'; c.font = '700 30px "Plus Jakarta Sans"'; c.fillText((CONFIG.brand.nameLatin || 'Subul as-Salam').toUpperCase() + ' · ' + L().name.toUpperCase(), W / 2, 262);
+  c.direction = 'rtl'; c.fillStyle = '#13241f'; c.font = '700 58px "Cairo"'; c.fillText('شهادة إتمام محطة', W / 2, 380);
+  c.direction = 'ltr'; c.fillStyle = '#5b6b64'; c.font = '34px "Plus Jakarta Sans"'; c.fillText('Certificate of stage completion', W / 2, 432);
+  c.fillStyle = '#0b4d3c'; c.font = '700 76px "Plus Jakarta Sans", "Cairo"'; c.direction = 'inherit'; c.fillText(name, W / 2, 570, W - 300);
+  c.strokeStyle = '#c9a227'; c.lineWidth = 3; c.beginPath(); c.moveTo(W / 2 - 330, 604); c.lineTo(W / 2 + 330, 604); c.stroke();
+  c.fillStyle = '#13241f'; c.font = '700 46px "Plus Jakarta Sans", "Cairo"'; c.fillText(`${icon} ${stage}`, W / 2, 700, W - 260);
+  c.direction = 'rtl'; c.fillStyle = '#5b6b64'; c.font = '40px "Cairo"'; c.fillText(stageAr, W / 2, 762, W - 260);
+  c.direction = 'ltr'; c.fillStyle = '#12735a'; c.font = '700 54px "Plus Jakarta Sans"'; c.fillText(`${score}%`, W / 2, 870);
+  c.fillStyle = '#5b6b64'; c.font = '28px "Plus Jakarta Sans"'; c.fillText(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, 930);
+  c.font = '24px "Plus Jakarta Sans"'; c.fillText(location.host, W / 2, H - 100);
+  const a = document.createElement('a'); a.download = `subul-certificate-${S.lang}.png`; a.href = cv.toDataURL('image/png'); a.click();
+  toast('🏅 ✓');
 }
