@@ -7,6 +7,7 @@ import { STAGES, EXTRA, surahName, allStageSurahs } from '../curriculum.js';
 import { t, stageTitle, stageDescAr } from '../i18n.js';
 import { pageHead, needLogin, refsSlot, fillRefs, qLangDir } from './components.js';
 import { videoCard, wireVideos } from './extra.js';
+import { isHaramain } from '../saudi-sources.js';
 
 const L = () => CONFIG.languages[S.lang];
 const stageById = (id) => STAGES.find((s) => s.id === id);
@@ -86,6 +87,7 @@ export async function stage(app, id) {
       a.querySelector('.ic').textContent = done ? '✅' : ihTypeIcon(it.type);
       const h = a.querySelector('h3'); h.classList.remove('skeleton'); h.style.width = ''; h.textContent = it.title; h.lang = lang; h.translate = false;
       a.querySelector('.desc').textContent = it.description || '';
+      if (isHaramain(lang, a.dataset.ih)) a.querySelector('.desc').insertAdjacentHTML('afterend', '<span class="chip gold tiny" lang="ar">🕋 رسالة الحرمين</span>');
     } catch { a.querySelector('h3').classList.remove('skeleton'); a.querySelector('h3').textContent = 'IslamHouse #' + a.dataset.ih; }
   });
 

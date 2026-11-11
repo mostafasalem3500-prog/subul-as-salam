@@ -45,6 +45,7 @@ const SCOPED = [
   [/^prayer$/, extra.prayer],
   [/^videos$/, extra.videos],
   [/^books$/, extra.books],
+  [/^saudi$/, extra.saudi],
   [/^quran$/, quran.list],
   [/^quran\/(\d+)$/, quran.reader],
   [/^hadith$/, hadith.categories],

@@ -7,6 +7,7 @@ import { IH, ihTypeIcon, attachmentKind, ytId, ytEmbed } from '../api.js';
 import { S, esc, toast, loading, reveal, isSup, href, computeProgress, loadStudentData, rafiq } from '../core.js';
 import { EXTRA, STAGES } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
+import { SAUDI, SAUDI_GROUPS, isHaramain, saudiCount } from '../saudi-sources.js';
 import { pageHead, needLogin, verseCard } from './components.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
 
@@ -133,6 +134,7 @@ export function fillItems(root) {
       a.querySelector('.ic').textContent = ihTypeIcon(it.type);
       const h = a.querySelector('h3'); h.classList.remove('skeleton'); h.style.width = ''; h.textContent = it.title; h.lang = S.lang;
       a.querySelector('.desc').textContent = it.description || '';
+      if (isHaramain(S.lang, a.dataset.ih) && !a.querySelector('.hb')) a.querySelector('.desc').insertAdjacentHTML('afterend', '<span class="chip gold tiny hb" lang="ar">🕋 رسالة الحرمين</span>');
     } catch { const h = a.querySelector('h3'); h.classList.remove('skeleton'); h.textContent = 'IslamHouse #' + a.dataset.ih; }
   });
 }
@@ -175,6 +177,7 @@ export async function books(app) {
   const rq = lang === 'es' ? await rafiq('BOOKS').catch(() => []) : [];
   app.innerHTML = `${pageHead('📚 ' + t('booksGuide'), `IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('library/books')}">${t('library')} ←</a>`)}
   <div class="wrap stack" style="padding-top:20px">
+    ${saudiCount(lang) ? `<a class="lc-band" href="${href('saudi')}" dir="rtl" lang="ar" style="margin-top:0"><span class="lc-band-ic">🕋</span><span class="grow"><span class="kicker">Saudi official sources</span><b>كتب الجهات السعودية المعتمدة</b><small>رئاسة الشؤون الدينية بالحرمين «رسالة الحرمين» · الإفتاء · وزارة الشؤون الإسلامية · كبار العلماء</small></span><span class="btn gold">${saudiCount(lang)} ←</span></a>` : ''}
     ${STAGES.map((st, i) => (st.ih[lang] || []).length || (EXTRA[st.id]?.more?.[lang] || []).length || st.haramain?.[lang] ? `<section class="stack reveal"><h2>${st.icon} ${t('stage')} ${i + 1}: ${esc(stageTitle(st.id))}</h2>
       <div class="grid">${[...(st.ih[lang] || []), ...(EXTRA[st.id]?.more?.[lang] || [])].map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}
       ${st.haramain?.[lang] ? `<a class="card lift item" href="${st.haramain[lang]}" target="_blank" rel="noopener"><span class="ic">🕋</span><span><h3>${t('haramain')}</h3><span class="desc">risala.prh.gov.sa</span></span></a>` : ''}</div></section>` : '').join('')}
@@ -205,4 +208,22 @@ export async function review(app, kind) {
     const score = student ? await S.db.saveQuiz(id, correct, total, details) : Math.round((correct / total) * 100);
     app.innerHTML = resultHTML(title, score, correct, total, `<a class="btn" href="${href('me/reviews')}">${t('reviews')}</a><a class="btn primary" href="${href('review/' + kind)}">${t('tryAgain')}</a>`);
   } });
+}
+
+// ---------------------------------------------------------------- كتب الجهات السعودية المعتمدة (من فهرس IslamHouse)
+export async function saudi(app) {
+  const lang = S.lang, G = SAUDI[lang] || {};
+  const groups = SAUDI_GROUPS.filter((g) => G[g.id]?.length);
+  app.innerHTML = `${pageHead('🕋 <span lang="ar">المصادر السعودية المعتمدة</span>', `Saudi official sources · IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('books')}">📚 ${t('booksGuide')} ←</a>`)}
+  <div class="wrap stack" style="padding-top:16px">
+    <p class="notice small" lang="ar" dir="rtl">هذه المواد صادرة عن جهات رسمية سعودية أو لعلماء من هيئاتها، كما هي مسجّلة في بيانات المصدر والناشر في IslamHouse. العنوان والملف يُعرضان من المصدر دون تعديل.</p>
+    <div class="tabs">${groups.map((g) => `<a class="btn sm" href="javascript:void 0" data-jump="${g.id}">${g.icon} ${G[g.id].length}</a>`).join('')}</div>
+    ${groups.map((g) => `<section class="stack" id="sg-${g.id}">
+      <div class="sec-head"><div><span class="kicker" dir="ltr">${esc(g.en)}</span><h2 lang="ar" dir="rtl" style="font-size:1.15rem">${g.icon} ${esc(g.ar)} <span class="chip">${G[g.id].length}</span></h2></div>
+        ${g.url ? `<a class="btn sm" href="${g.url}" target="_blank" rel="noopener">${esc(g.url.replace('https://', ''))} ↗</a>` : ''}</div>
+      <div class="grid">${G[g.id].map((id) => `<a class="card lift item" href="${href('item/' + id)}" data-ih="${id}"><span class="ic">📘</span><span style="min-width:0"><h3 class="skeleton" style="width:80%">&nbsp;</h3><span class="desc"></span></span></a>`).join('')}</div></section>`).join('')}
+    ${groups.length ? '' : `<p class="muted">${t('noItems')}</p>`}
+  </div>`;
+  reveal(app); fillItems(app);
+  app.querySelectorAll('[data-jump]').forEach((b) => b.onclick = () => app.querySelector('#sg-' + b.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
