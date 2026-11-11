@@ -61,6 +61,7 @@ export default async function langHome(app) {
         ${feat('💧', t('prayerWudu'), `${t('wudu')} · ${t('prayerSteps')} · ${t('prayerTracker')}`)}
         ${feat('🎬', t('videos'), 'IslamHouse.com')}
         ${feat('🔁', t('reviews'), `${t('weekly')} · ${t('monthly')}`)}
+        ${feat('🧭', '<span lang="ar">المسارات الموضوعية</span>', `<a href="${href('tracks')}">8 · IslamHouse</a> · <a href="${href('saudi')}">🕋 <span lang="ar">المصادر السعودية</span></a>`)}
         ${feat('💬', t('chat'), `${t('tests')} · ${t('follow')}`)}
       </section>
       <section class="feature-col">
