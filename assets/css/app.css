@@ -495,3 +495,24 @@ body[dir="ltr"] .page-head p[dir="auto"] { text-align: start; }
 .trk-list li { display: flex; align-items: center; gap: 12px; }
 .trk-list li.done { background: var(--ok-soft); }
 .trk-list li.done .lc-num { background: var(--ok); }
+
+/* ---------- لوحة الحفظ ---------- */
+.lead-sm { font-size: 1.05rem; margin: 0; }
+.hz-legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); }
+.hz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hz-dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.hz-dot.s0, .hz-tile.s0 { background: var(--surface); border: 1px solid var(--line); }
+.hz-dot.s1, .hz-tile.s1 { background: var(--sky-soft); border: 1px solid var(--sky); }
+.hz-dot.s2, .hz-tile.s2 { background: var(--gold-soft); border: 1px solid var(--gold-2); }
+.hz-dot.s3, .hz-tile.s3 { background: var(--ok-soft); border: 1px solid var(--ok); }
+.hz-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; align-items: end; }
+.hz-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; text-decoration: none; color: inherit;
+  min-height: calc(110px * var(--h)); padding: 8px 4px; border-radius: 12px; transition: transform .2s var(--ease); animation: lcIn .5s var(--ease) both; animation-delay: var(--d); }
+.hz-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.hz-tile b { font-family: var(--quran); font-size: 1.05rem; line-height: 1.3; }
+.hz-tile small { color: var(--muted); font-family: var(--lat); font-size: .7rem; }
+.hz-tile .n { position: absolute; top: 4px; inset-inline-start: 6px; font: 700 .68rem var(--lat); color: var(--muted); }
+.hz-tile.s3::after { content: "✔"; position: absolute; top: 3px; inset-inline-end: 6px; color: var(--ok); font-size: .8rem; }
+.hz-tile.next { outline: 3px solid var(--gold-bright); animation: lcIn .5s var(--ease) both, hzPulse 2.2s ease-in-out 1s infinite; }
+@keyframes hzPulse { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .hz-tile, .hz-tile.next { animation: none; } }

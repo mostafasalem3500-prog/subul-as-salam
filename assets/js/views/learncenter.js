@@ -22,7 +22,7 @@ export default async function learnCenter(app) {
     <section class="stack reveal" id="sec-prayer"><div class="sec-head"><h2>💧 ${t('prayerWudu')}</h2><a class="btn" href="${href('prayer')}">${t('open')} ←</a></div>
       ${prayerTrackerHTML()}</section>
 
-    <section class="stack reveal" id="sec-quran"><div class="sec-head"><h2>📖 ${t('quran')}</h2><a class="btn" href="${href('quran')}">${t('more')} ←</a></div>
+    <section class="stack reveal" id="sec-quran"><div class="sec-head"><h2>📖 ${t('quran')}</h2><span class="row"><a class="btn gold" href="${href('hifz')}">🧠 <span lang="ar">لوحة الحفظ</span></a><a class="btn" href="${href('quran')}">${t('more')} ←</a></span></div>
       <div class="surah-list">${juz.map((n) => `<a href="${href('quran/' + n)}"><span class="n">${n}</span><span><b lang="ar" style="font-family:var(--quran);font-size:1.15rem">${esc(SURAHS[n - 1][0])}</b><br><span class="tiny muted">${SURAHS[n - 1][1]}</span></span></a>`).join('')}</div>
       <p class="src">QuranEnc.com · ${L.quran.map(esc).join(' · ')}</p></section>
 

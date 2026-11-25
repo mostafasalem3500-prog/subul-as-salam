@@ -21,6 +21,7 @@ import * as sup from './views/supervisor.js';
 import * as sp from './views/studentpage.js';
 import * as extra from './views/extra.js';
 import * as lc from './views/langcourse.js';
+import * as hifz from './views/hifz.js';
 import sources from './views/sources.js';
 
 // مسارات خارج الأقسام
@@ -47,6 +48,7 @@ const SCOPED = [
   [/^books$/, extra.books],
   [/^saudi$/, extra.saudi],
   [/^tracks(?:\/(\w+))?$/, extra.tracks],
+  [/^hifz(?:\/(test))?$/, hifz.route],
   [/^quran$/, quran.list],
   [/^quran\/(\d+)$/, quran.reader],
   [/^hadith$/, hadith.categories],
@@ -76,7 +78,7 @@ function renderNav() {
   if (!L) {
     links = [['#/', t('home')], ['#/sources', t('sources')], ...(me?.role === 'admin' ? [['#/admin', t('admin')]] : [])];
   } else if (me?.role === 'student') {
-    links = [[href(), '🏠'], [href('me/today'), t('today')], [href('me'), t('myPage') + badge], [href('quran'), t('quran')], [href('hadith'), t('hadith')],
+    links = [[href(), '🏠'], [href('me/today'), t('today')], [href('me'), t('myPage') + badge], [href('quran'), t('quran')], [href('hifz'), '🧠'], [href('hadith'), t('hadith')],
              [href('prayer'), t('prayerWudu')], [href('videos'), t('videos')], [href('books'), t('booksGuide')], [href('tracks'), '🧭']];
   } else if (isSup()) {
     links = [[href(), '🏠'], [href('supervisor'), t('students') + badge], [href('supervisor/cards'), t('cards')], [href('supervisor/guide'), t('guide')],
