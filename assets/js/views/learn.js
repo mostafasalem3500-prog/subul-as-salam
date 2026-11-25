@@ -1,6 +1,6 @@
 // نافذة الطالب: لوحة الرحلة، المحطة، المادة، الاختبار
 import { CONFIG } from '../config.js';
-import { IH, HE, ihTypeIcon, attachmentKind, ytEmbed } from '../api.js';
+import { IH, HE, QE, ihTypeIcon, attachmentKind, ytEmbed } from '../api.js';
 import { S, esc, toast, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
 import { STAGES, EXTRA, surahName, allStageSurahs } from '../curriculum.js';
@@ -68,6 +68,12 @@ export async function stage(app, id) {
 
     <section class="stack" id="newm"></section>
 
+    <div class="card row between off-card">
+      <div><h3>📥 <span lang="ar">احفظ المحطة للقراءة دون إنترنت</span></h3><p class="small muted" lang="ar">نصوص المواد والآيات والأحاديث تُحفظ في جهازك (الملفات الكبيرة والمرئيات تحتاج اتصالًا).</p>
+        <div class="qbar hidden" id="offbar"><i style="width:0"></i></div></div>
+      <button class="btn${localStorage.getItem(`subul-off-${lang}-${id}`) ? ' done' : ''}" id="offbtn">${localStorage.getItem(`subul-off-${lang}-${id}`) ? '✓ ' + fmtOff(+localStorage.getItem(`subul-off-${lang}-${id}`)) : '📥'}</button>
+    </div>
+
     <div class="card row between" style="background:var(--green-soft)">
       <div><h3>✅ ${t('quiz')}</h3><p class="small muted">${t('pickTranslation')} · ${CONFIG.passScore}%+${sp?.bestQuiz != null ? ` · ${t('score')}: <b>${sp.bestQuiz}</b>` : ''}</p></div>
       <a class="btn primary" href="#/quiz/${id}">${t('quiz')} ←</a>
@@ -79,6 +85,7 @@ export async function stage(app, id) {
   </div>`;
 
   wireVideos(app); fillRefs(app);
+  app.querySelector('#offbtn').onclick = () => offlinePack(app, st, lang, ids, more, ex);
   // بطاقات مواد إسلام هاوس
   app.querySelectorAll('[data-ih]').forEach(async (a) => {
     try {
@@ -204,4 +211,23 @@ export async function certificate({ name, stage, stageAr, score, icon }) {
   c.font = '24px "Plus Jakarta Sans"'; c.fillText(location.host, W / 2, H - 100);
   const a = document.createElement('a'); a.download = `subul-certificate-${S.lang}.png`; a.href = cv.toDataURL('image/png'); a.click();
   toast('🏅 ✓');
+}
+
+// ---------------------------------------------------------------- حزمة المحطة دون إنترنت
+const fmtOff = (ts) => new Date(ts).toLocaleDateString();
+async function offlinePack(app, st, lang, ids, more, ex) {
+  const L = CONFIG.languages[lang], key = S.qKey, btn = app.querySelector('#offbtn'), bar = app.querySelector('#offbar');
+  const surahs = [...new Set([...st.quran, ...(ex.ayat || []).map((r) => +String(r).split(':')[0])])];
+  const jobs = [
+    ...[...ids, ...more].map((i) => () => IH.item(i, L.ih)),
+    ...surahs.map((n) => () => QE.sura(key, n)),
+    () => HE.list(L.hadeeth, st.hadith, 1, 10).then((r) => Promise.all((r.data || []).map((h) => HE.one(L.hadeeth, h.id).catch(() => null)))),
+    () => HE.list(L.hadeeth, st.hadith, 1 + (STAGES.indexOf(st) % 2), 10),
+  ];
+  btn.disabled = true; bar.classList.remove('hidden');
+  let ok = 0, done = 0;
+  for (const j of jobs) { try { await j(); ok++; } catch {} done++; bar.firstElementChild.style.width = `${(100 * done) / jobs.length}%`; btn.textContent = `${done}/${jobs.length}`; }
+  localStorage.setItem(`subul-off-${lang}-${st.id}`, Date.now());
+  btn.disabled = false; btn.classList.add('done'); btn.textContent = '✓ ' + fmtOff(Date.now());
+  toast(`📥 ${ok}/${jobs.length} ✓`);
 }

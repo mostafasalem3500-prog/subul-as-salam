@@ -11,10 +11,10 @@ const TTL = 1000 * 60 * 60 * 24 * 3; // 3 أيام
 let proxyDown = false;
 const liveBlocked = new Set(JSON.parse(sessionStorage.getItem('subul-blocked') || '[]'));
 
-function lsGet(url) {
+function lsGet(url, anyAge = false) {
   try {
     const raw = localStorage.getItem(LS_PREFIX + url); if (!raw) return null;
-    const { t, v } = JSON.parse(raw); if (Date.now() - t > TTL) return null; return v;
+    const { t, v } = JSON.parse(raw); if (!anyAge && Date.now() - t > TTL) return null; return v;
   } catch { return null; }
 }
 function lsSet(url, v) {
@@ -33,6 +33,7 @@ async function timed(url, ms = 9000) {
 export async function getJSON(url) {
   if (mem.has(url)) return mem.get(url);
   const cached = lsGet(url); if (cached) { mem.set(url, cached); return cached; }
+  if (!navigator.onLine) { const stale = lsGet(url, true); if (stale) { mem.set(url, stale); return stale; } }
   const host = new URL(url).host;
   let data = null, err = null;
   if (!liveBlocked.has(host)) {
@@ -52,6 +53,8 @@ export async function getJSON(url) {
     const p = mirrorPath(url);
     if (p) { try { data = await timed(new URL(p, document.baseURI).href, 6000); } catch (e) { err = e; } }
   }
+  // دون اتصال: نسخة قديمة محفوظة خير من لا شيء (المحتوى نفسه لا يتغيّر)
+  if (!data) { const stale = lsGet(url, true); if (stale) { mem.set(url, stale); return stale; } }
   if (!data) throw err || new Error('fetch failed');
   mem.set(url, data); lsSet(url, data);
   return data;

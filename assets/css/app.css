@@ -570,3 +570,5 @@ body:has(#save-fab) #app { padding-bottom: 84px; }
 .brand { white-space: nowrap; }
 @media (max-width: 520px) { .fs-btn { padding: 3px 7px; margin-inline-start: 3px; font-size: .72rem; } #brand-lang { display: none; } .brand { font-size: .95rem; } }
 @media (max-width: 420px) { .brand > span { display: none; } }
+.off-card { background: var(--sky-soft); }
+.net-bar { position: sticky; top: 0; z-index: 60; background: #3a3a3a; color: #fff; text-align: center; padding: 6px 10px; font-size: .85rem; }

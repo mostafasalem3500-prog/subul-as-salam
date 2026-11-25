@@ -187,7 +187,15 @@ async function processJoin() {
   toast(r === 'pending' ? t('sentRequest') : r === 'active' ? t('linked') + ' ✓' : 'الرمز غير صحيح', 5000);
 }
 
+function netBanner() {
+  let b = document.querySelector('#net-bar');
+  if (navigator.onLine) { b?.remove(); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'net-bar'; b.className = 'net-bar'; b.setAttribute('role', 'status'); document.body.prepend(b); }
+  b.innerHTML = '📴 <span lang="ar">أنت دون اتصال — تظهر الصفحات والمحطات المحفوظة في جهازك</span> · Offline';
+}
+addEventListener('online', netBanner); addEventListener('offline', netBanner);
 async function boot() {
+  netBanner();
   document.documentElement.style.setProperty('--fs', +localStorage.getItem('subul-fs') || 1);
   S.db = await createDB();
   S.me = await S.db.init();
