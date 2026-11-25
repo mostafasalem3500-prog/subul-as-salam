@@ -10,6 +10,7 @@ import { needLogin, journeyHTML, drawJourney, verseCard } from './components.js'
 import { HE } from '../api.js';
 import { videoCard, wireVideos, prayerTrackerHTML, wirePrayerTracker, prayerHeatHTML, todayKey, isoWeek, monthKey } from './extra.js';
 import { autoScore } from '../db.js';
+import { achievements, badgesHTML, miniHifzHTML } from '../achievements.js';
 
 const TABS = [['today', '☀️', 'today'], ['path', '🧭', 'curriculum'], ['reviews', '🔁', 'reviews'], ['tests', '📝', 'tests'], ['chat', '💬', 'chat'], ['follow', '📊', 'follow']];
 let stopChat = null;
@@ -108,6 +109,10 @@ function followTab(body, ctx) {
       <div class="stat"><b>${surahMemo.filter((m) => m.status !== 'learning').length}</b><span>${t('memoSurahs')}</span></div>
       <div class="stat"><b style="font-size:1.2rem">${ago(D.progress.map((p) => p.completed_at).sort().pop())}</b><span>${t('lastActivity')}</span></div>
     </div>
+    <div class="row" style="justify-content:flex-end"><button class="btn sm" id="prt">🖨️ <span lang="ar">تقرير للطباعة / PDF</span></button></div>
+    <div class="print-only" lang="ar" dir="rtl"><h1>${esc(CONFIG.brand.nameAr)} — تقرير الطالب</h1><p><b>${esc(student.full_name || student.email || '')}</b> · ${esc(CONFIG.languages[student.lang]?.name || '')} · ${fmtDate(new Date())}</p></div>
+    ${badgesHTML(achievements({ D, P, streak: streakOf(D) }))}
+    <div class="card stack"><div class="row between"><h3>🗺️ <span lang="ar">خريطة الحفظ — جزء عمّ</span></h3>${viewer === 'student' ? `<a class="btn sm" href="${href('hifz')}">🧠 ←</a>` : ''}</div>${miniHifzHTML(D.memo, surahName)}</div>
     <h2>${t('stages')}</h2>
     <div class="stage-grid">${P.stages.map((x, i) => `<div class="card stack" style="border-top:4px solid ${x.stage.color}">
       <div class="row between"><b>${x.stage.icon} ${i + 1}. ${esc(stageTitle(x.stage.id, isS ? 'ar' : undefined))}</b>${x.complete ? '<span class="chip ok">✔</span>' : ''}</div>
@@ -134,6 +139,7 @@ function followTab(body, ctx) {
     </div>
     ${isS ? `<div class="row"><a class="btn" href="#/supervisor">→ ${t('students')}</a><button class="btn" id="unl" style="color:var(--red)" lang="ar">إلغاء الربط</button></div>` : ''}`;
 
+  body.querySelector('#prt').onclick = () => window.print();
   if (!isS) return;
   const reload = () => studentPage(ctx.app, student, viewer, 'follow');
   const dlg = body.querySelector('#dlg'); let evStage = null;
