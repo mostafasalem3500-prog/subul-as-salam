@@ -5,6 +5,9 @@ DirectoryIndex index.html
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
   <FilesMatch "\.(svg|png|jpg|webp|woff2?)$">
     Header set Cache-Control "public, max-age=86400"
   </FilesMatch>
@@ -19,6 +22,6 @@ DirectoryIndex index.html
 </IfModule>
 
 # ملفات التطوير لا تُخدم للزوار
-RedirectMatch 404 ^/(\.git|scripts|supabase|node_modules)(/|$)
+RedirectMatch 404 ^/(\.git|\.github|scripts|supabase|node_modules|docs)(/|$)
 RedirectMatch 404 ^/package\.json$
 

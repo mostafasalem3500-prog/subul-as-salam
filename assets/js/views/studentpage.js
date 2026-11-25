@@ -3,7 +3,7 @@
 //  التبويبات: المنهج · المتابعة · المحادثات · الاختبارات
 // =====================================================================
 import { CONFIG } from '../config.js';
-import { S, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal, isSup, timeShort, linkify, confetti, href } from '../core.js';
+import { S, userKey, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal, isSup, timeShort, linkify, confetti, href } from '../core.js';
 import { STAGES, surahName, surahAyat } from '../curriculum.js';
 import { t, stageTitle, getUiLang } from '../i18n.js';
 import { needLogin, journeyHTML, drawJourney, verseCard } from './components.js';
@@ -452,7 +452,7 @@ const TOUR = {
   sw: [['🌱', 'Karibu Subul as-Salam', 'Safari yako tangu Shahada, hatua kwa hatua, kwa vitabu, aya na hadithi kutoka vyanzo vilivyoidhinishwa.'], ['☀️', 'Somo kila siku', 'Katika «Leo» utapata somo fupi, aya, hadithi na swala zako.'], ['🧠', 'Hifadhi Qur-ani', 'Ubao wa kuhifadhi unaonyesha Juzuu Amma sura kwa sura; jipime kwa «kamilisha aya».'], ['💬', 'Msimamizi wako yuko nawe', 'Bonyeza kitufe cha mazungumzo kwenye ukurasa wowote kutuma swali lako pamoja na kiungo chake.']],
 };
 function welcomeTour() {
-  if (localStorage.getItem('subul-tour') || document.querySelector('.tour')) return;
+  if (localStorage.getItem(userKey('subul-tour')) || document.querySelector('.tour')) return;
   const steps = TOUR[getUiLang()] || TOUR.en; let i = 0;
   const d = document.createElement('dialog'); d.className = 'tour'; document.body.append(d);
   const draw = () => {
@@ -462,6 +462,7 @@ function welcomeTour() {
       <div class="row" style="justify-content:center"><button class="btn" id="tx">✕</button><button class="btn primary" id="tn">${i < steps.length - 1 ? '→' : '✓'}</button></div></div>`;
     d.querySelector('#tx').onclick = close; d.querySelector('#tn').onclick = () => { if (++i >= steps.length) close(); else draw(); };
   };
-  const close = () => { localStorage.setItem('subul-tour', '1'); d.close(); d.remove(); };
+  const close = () => { localStorage.setItem(userKey('subul-tour'), '1'); d.close(); d.remove(); };
   draw(); d.showModal();
+  addEventListener('hashchange', () => { if (d.isConnected) { d.close(); d.remove(); } }, { once: true });
 }

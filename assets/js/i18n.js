@@ -28,7 +28,7 @@ const T = {
     addStudent: 'إضافة طالب بالإيميل', students: 'طلابي', currentStage: 'المحطة الحالية',
     lastActivity: 'آخر نشاط', avgScore: 'متوسط الدرجات', evaluate: 'تقييم المحطة', notes: 'ملاحظات',
     save: 'حفظ', verify: 'توثيق التسميع', pending: 'طلبات الإشراف', approve: 'اعتماد', reject: 'رفض',
-    demo: 'وضع التجربة: البيانات تُحفظ في هذا المتصفح فقط. اربط Supabase من ملف config.js.',
+    demo: 'نسخة تجريبية: بياناتك محفوظة في هذا المتصفح فقط.',
     cycleTitle: 'الدورة اليومية', search: 'بحث', all: 'الكل', books: 'كتب', articles: 'مقالات',
     audios: 'صوتيات', videos: 'مرئيات', poster: 'مطويات وبطاقات', more: 'المزيد',
     words: 'كلمات دعوية', inContext: 'في سياقها من ترجمة معتمدة', flip: 'اقلب البطاقة',

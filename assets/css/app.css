@@ -572,3 +572,8 @@ body:has(#save-fab) #app { padding-bottom: 84px; }
 @media (max-width: 420px) { .brand > span { display: none; } }
 .off-card { background: var(--sky-soft); }
 .net-bar { position: sticky; top: 0; z-index: 60; background: #3a3a3a; color: #fff; text-align: center; padding: 6px 10px; font-size: .85rem; }
+.pw-wrap { position: relative; }
+.pw-wrap .eye { position: absolute; inset-inline-end: 8px; bottom: 8px; border: 0; background: transparent; font-size: 1.1rem; cursor: pointer; padding: 6px; }
+.skip { position: absolute; inset-inline-start: 8px; top: -60px; z-index: 100; background: var(--gold-2); color: #1b1404; padding: 8px 14px; border-radius: 8px; font-weight: 800; }
+.skip:focus { top: 8px; }
+#app:focus { outline: none; }

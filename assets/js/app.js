@@ -5,7 +5,7 @@
 // =====================================================================
 import { CONFIG } from './config.js';
 import { createDB } from './db.js';
-import { S, $, applyUi, esc, toast, uiPref, isSup, href } from './core.js';
+import { S, $, applyUi, esc, toast, uiPref, isSup, href, migrateUserKeys } from './core.js';
 import { t, getUiLang } from './i18n.js';
 
 import root from './views/root.js';
@@ -167,9 +167,11 @@ export async function render() {
       if (typeof out === 'string') app.innerHTML = out;
       scopeLinks(app); scopeLinks($('#foot'));
       askButton(path);
+      afterRender(app);
     } catch (e) {
       console.error(e);
-      if (id === renderId) app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card"><p>${t('error')}</p><p class="tiny muted">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">${t('retry')}</button></div></div>`;
+      if (id === renderId) app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card"><p>${t('error')}</p><p class="tiny muted">${esc(e.message || e)}</p><button class="btn" data-reload>${t('retry')}</button></div></div>`;
+      app.querySelector('[data-reload]')?.addEventListener('click', () => location.reload());
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
     return;
@@ -195,13 +197,16 @@ function netBanner() {
 }
 addEventListener('online', netBanner); addEventListener('offline', netBanner);
 async function boot() {
+  $('#skip').onclick = () => $('#app').focus();
   netBanner();
   document.documentElement.style.setProperty('--fs', +localStorage.getItem('subul-fs') || 1);
   S.db = await createDB();
   S.me = await S.db.init();
+  migrateUserKeys();
   if (S.db.mode === 'local') $('#demo-bar').classList.remove('hidden');
   S.db.onChange(async (me) => {
     const was = S.me?.id; S.me = me;
+    migrateUserKeys();
     if (me) await processJoin();
     if (was !== me?.id) {
       if (me && /\/(login|signup)$/.test(location.hash)) {
@@ -253,4 +258,19 @@ function askButton(path) {
     });
   };
   document.body.append(b);
+}
+
+// ---------------------------------------------------------------- بعد كل صفحة: العنوان، التركيز، إظهار كلمة المرور
+let firstRender = true;
+function afterRender(app) {
+  const h = app.querySelector('.page-head h1, h1')?.textContent.replace(/\s+/g, ' ').trim();
+  document.title = h ? `${h.slice(0, 60)} — سُبُل السلام` : 'سُبُل السلام — منصة تعليم المسلم الجديد';
+  if (!firstRender) app.focus({ preventScroll: true });   // قارئ الشاشة يبدأ من أول الصفحة الجديدة
+  firstRender = false;
+  app.querySelectorAll('input[type=password]:not([data-eye])').forEach((inp) => {
+    inp.dataset.eye = 1;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'eye'; b.textContent = '👁'; b.setAttribute('aria-label', 'show password');
+    b.onclick = () => { inp.type = inp.type === 'password' ? 'text' : 'password'; b.textContent = inp.type === 'password' ? '👁' : '🙈'; };
+    inp.parentElement.classList.add('pw-wrap'); inp.after(b);
+  });
 }

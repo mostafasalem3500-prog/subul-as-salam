@@ -88,7 +88,8 @@ export async function reader(app, nStr) {
     const w = tk.dataset.w; app.querySelectorAll('.tok.hit').forEach((x) => x.classList.remove('hit'));
     const hits = app.querySelectorAll(`.tok[data-w="${CSS.escape(w)}"]`); hits.forEach((x) => x.classList.add('hit'));
     const ayat = [...new Set([...hits].map((x) => x.closest('.ayah').dataset.a))];
-    $('#hits').innerHTML = `— «<b>${esc(tk.textContent)}</b>»: ${hits.length}× (${ayat.map((a) => `<a href="#/quran/${n}" onclick="event.preventDefault();document.getElementById('a${a}').scrollIntoView({block:'center',behavior:'smooth'})">${a}</a>`).join('، ')})`;
+    $('#hits').innerHTML = `— «<b>${esc(tk.textContent)}</b>»: ${hits.length}× (${ayat.map((a) => `<a href="#/quran/${n}" data-goto="${a}">${a}</a>`).join('، ')})`;
+    $('#hits').querySelectorAll('[data-goto]').forEach((g) => g.onclick = (e) => { e.preventDefault(); document.getElementById('a' + g.dataset.goto)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
   });
 
   $('#m-learn')?.addEventListener('click', async () => { try { await S.db.setMemo('surah', n, 'learning'); toast(t('learning')); } catch { toast('✔ ' + t('verified')); } });

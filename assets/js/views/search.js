@@ -5,7 +5,7 @@
 //  #/{L}/saved    المفضّلة (تُحفظ في هذا المتصفح)
 // =====================================================================
 import { CONFIG } from '../config.js';
-import { S, esc, href, toast } from '../core.js';
+import { S, userKey, esc, href, toast } from '../core.js';
 import { STAGES, SURAHS } from '../curriculum.js';
 import { t, stageTitle, getUiLang } from '../i18n.js';
 import { TRACKS, trackName } from '../tracks.js';
@@ -62,7 +62,7 @@ export async function search(app) {
 }
 
 // ---------------------------------------------------------------- المفضّلة
-const SK = () => 'subul-saved-' + S.lang;
+const SK = () => userKey('subul-saved-' + S.lang);
 export const savedList = () => { try { return JSON.parse(localStorage.getItem(SK())) || []; } catch { return []; } };
 const savedSet = (a) => localStorage.setItem(SK(), JSON.stringify(a));
 export function isSaved(h) { return savedList().some((x) => x.h === h); }

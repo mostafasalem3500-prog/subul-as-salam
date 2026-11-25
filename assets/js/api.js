@@ -17,11 +17,19 @@ function lsGet(url, anyAge = false) {
     const { t, v } = JSON.parse(raw); if (!anyAge && Date.now() - t > TTL) return null; return v;
   } catch { return null; }
 }
+function evictOldest(n) {
+  const ks = [];
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith(LS_PREFIX)) { try { ks.push([k, JSON.parse(localStorage.getItem(k)).t || 0]); } catch { ks.push([k, 0]); } } }
+  ks.sort((a, b) => a[1] - b[1]).slice(0, n).forEach(([k]) => localStorage.removeItem(k));
+  return ks.length;
+}
 function lsSet(url, v) {
-  try {
-    const s = JSON.stringify({ t: Date.now(), v });
-    if (s.length < 400_000) localStorage.setItem(LS_PREFIX + url, s);
-  } catch { /* الذاكرة ممتلئة: نتجاهل */ }
+  const s = JSON.stringify({ t: Date.now(), v });
+  if (s.length >= 400_000) return;
+  for (let tries = 0; tries < 4; tries++) {
+    try { localStorage.setItem(LS_PREFIX + url, s); return; }
+    catch { if (!evictOldest(12)) return; }   // ذاكرة المتصفح ممتلئة: نحذف أقدم 12 نسخة ونعيد
+  }
 }
 
 async function timed(url, ms = 9000) {

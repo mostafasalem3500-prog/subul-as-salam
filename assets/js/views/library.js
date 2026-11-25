@@ -1,7 +1,7 @@
 // مكتبة إسلام هاوس بلغة الطالب — مباشرة من IslamHouse API
 import { CONFIG } from '../config.js';
 import { IH, ihTypeIcon } from '../api.js';
-import { S, esc, loading } from '../core.js';
+import { S, esc, safeUrl, loading } from '../core.js';
 import { t } from '../i18n.js';
 import { pageHead, qLangDir } from './components.js';
 
@@ -21,9 +21,9 @@ export async function browse(app, type = 'books', pageStr = '1') {
   const isSup = ['supervisor', 'admin'].includes(S.me?.role);
   app.innerHTML = `${pageHead('📚 ' + t('library'), `IslamHouse.com · ${esc(CONFIG.languages[S.lang].name)}`)}
   <div class="wrap" style="padding-top:12px">
-    <div class="tabs">${blocks.map((b) => `<a class="btn sm" href="#/library/${b.block_name}" aria-pressed="${b.block_name === type}">${ihTypeIcon(b.block_name)} ${label(b.block_name)} <span class="tiny">${b.items_count}</span></a>`).join('')}</div>
+    <div class="tabs">${blocks.map((b) => `<a class="btn sm" href="#/library/${esc(b.block_name)}" aria-pressed="${b.block_name === type}">${ihTypeIcon(b.block_name)} ${label(b.block_name)} <span class="tiny">${b.items_count}</span></a>`).join('')}</div>
     <div class="grid">${items.map((it) => `<a class="card lift item" href="#/item/${it.id}" dir="${qLangDir(S.lang)}">
-      ${it.image ? `<img class="thumb" src="${esc(it.image)}" alt="" loading="lazy">` : `<span class="ic">${ihTypeIcon(it.type)}</span>`}
+      ${it.image ? `<img class="thumb" src="${esc(safeUrl(it.image))}" alt="" loading="lazy">` : `<span class="ic">${ihTypeIcon(it.type)}</span>`}
       <span style="min-width:0"><h3 lang="${S.lang}" translate="no">${esc(it.title)}</h3><span class="desc" translate="no">${esc(it.description || '')}</span>
       ${isSup ? `<span class="chip sky tiny" dir="ltr">#${it.id}</span>` : ''}</span></a>`).join('')}</div>
     <div class="row between" style="margin-top:18px">

@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>سُبُل السلام — منصة تعليم المسلم الجديد</title>
-<meta name="description" content="منصة مجانية لتعليم المسلم الجديد بالسواحيلية والكينيارواندية والإسبانية: من النطق بالشهادة إلى حفظ القرآن والسنة، مع متابعة المشرف. المحتوى من IslamHouse وQuranEnc وHadeethEnc.">
+<meta name="description" content="منصة مجانية لتعليم المسلم الجديد بالسواحيلية والكينيارواندية والإنجليزية والإسبانية: من النطق بالشهادة إلى حفظ القرآن والسنة، مع متابعة المشرف. المحتوى من IslamHouse وQuranEnc وHadeethEnc.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: blob:; frame-src https:; connect-src 'self' https://quranenc.com https://api3.islamhouse.com https://hadeethenc.com https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#0b4d3c">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
@@ -16,6 +18,7 @@
 <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
+<button type="button" class="skip" id="skip">تخطَّ إلى المحتوى · Skip</button>
 <div id="demo-bar" class="demo-bar hidden"></div>
 <header class="top pattern">
   <div class="wrap">
@@ -28,7 +31,7 @@
     <nav class="nav" id="nav" aria-label="القائمة الرئيسية"></nav>
   </div>
 </header>
-<main id="app" tabindex="-1" aria-live="polite"></main>
+<main id="app" tabindex="-1"></main>
 <footer class="foot">
   <div class="wrap" id="foot"></div>
 </footer>

@@ -30,7 +30,8 @@ export async function dashboard(app) {
   const sent = links.filter((l) => l.status === 'pending' && !l.waitingForMe);
   const unreadOf = (id) => unread.filter((m) => m.student_id === id).length;
   const invite = S.me.supervisor_code ? `${location.origin}${location.pathname}#/${LG}/join/${S.me.supervisor_code}` : '';
-  const rows = await Promise.all(students.map(async (s) => { const D = await loadStudentData(s.id); return { s, D, P: computeProgress(s.lang || CONFIG.defaultLang, D) }; }));
+  const DD = await S.db.studentsData(students.map((s) => s.id));
+  const rows = students.map((s) => { const D = DD[s.id]; return { s, D, P: computeProgress(s.lang || CONFIG.defaultLang, D) }; });
   rows.sort((a, b) => new Date(b.s.last_activity || 0) - new Date(a.s.last_activity || 0));
   const n = rows.length;
   const avgProg = n ? Math.round(rows.reduce((a, r) => a + r.P.overall, 0) / n) : 0;

@@ -10,7 +10,7 @@
 // =====================================================================
 import { CONFIG } from '../config.js';
 import { QE } from '../api.js';
-import { S, esc, href, toast, confetti, loading } from '../core.js';
+import { S, userKey, esc, href, toast, confetti, loading } from '../core.js';
 import { surahName } from '../curriculum.js';
 import { pageHead, ayahMark } from './components.js';
 import { shuffle } from './quizengine.js';
@@ -53,23 +53,23 @@ const sayBtn = (s) => `<button class="say" data-say="${esc(s)}" aria-label="اس
 function wireSay(root, C) { root.querySelectorAll('[data-say]').forEach((b) => b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); speak(C, b.dataset.say); }); }
 
 // ---- التقدّم: محليًّا دائمًا، وفي قاعدة البيانات عند تسجيل الدخول (kind = 'lang')
-const PK = 'subul-langprog';
+const PKb = 'subul-langprog';
 const keyOf = (C, lvl, i) => `lang:${C.code}:${lvl}:${i}`;
-function doneSet() { return new Set(ls.get(PK, [])); }
+function doneSet() { return new Set(ls.get(userKey(PKb), [])); }
 async function syncDone() {
   if (!S.me) return doneSet();
   const rows = await S.db.progress().catch(() => []);
-  const set = doneSet(); rows.filter((r) => r.kind === 'lang').forEach((r) => set.add(r.item_key)); ls.set(PK, [...set]); return set;
+  const set = doneSet(); rows.filter((r) => r.kind === 'lang').forEach((r) => set.add(r.item_key)); ls.set(userKey(PKb), [...set]); return set;
 }
 async function markDone(k) {
-  const set = doneSet(); set.add(k); ls.set(PK, [...set]);
+  const set = doneSet(); set.add(k); ls.set(userKey(PKb), [...set]);
   if (S.me) await S.db.markDone(k, 'lang', 'lang').catch(() => {});
 }
 
 // ---- المراجعة المتباعدة (Leitner: 5 صناديق)
 const GAP = [0, 1, 3, 7, 16, 35];
 const DAY = 864e5;
-const srsKey = (C) => 'subul-srs-' + C.code;
+const srsKey = (C) => userKey('subul-srs-' + C.code);
 function srsGet(C) { return ls.get(srsKey(C), {}); }
 function srsUpdate(C, id, ok) {
   const st = srsGet(C), c = st[id] || { b: 0 };
@@ -358,9 +358,10 @@ function quizPage(app, C, lvlId, idx) {
       <div class="card stack" style="align-items:center;display:flex;flex-direction:column">
         <div class="ring" style="--p:${score};--size:150px"><b>${score}<small>%</small></b></div>
         <h2>${pass ? '🌟 نجحت' : 'حاول مرة أخرى'}</h2><p class="muted">${correct} / ${Qs.length} · النجاح ${CONFIG.passScore}%</p>
-        <div class="row" style="justify-content:center"><a class="btn" href="${href('lang/quiz/' + lvl.id + (idx ? '/' + idx : ''))}" onclick="setTimeout(()=>dispatchEvent(new HashChangeEvent('hashchange')),0)">🔁 أعد</a>
+        <div class="row" style="justify-content:center"><a class="btn" href="${href('lang/quiz/' + lvl.id + (idx ? '/' + idx : ''))}" data-rerun>🔁 أعد</a>
           <a class="btn primary" href="${href('lang/' + lvl.id)}">${esc(lvl.t)}</a>
           ${pass && !lesson && nextLvl ? `<a class="btn gold" href="${href('lang/' + nextLvl.id)}">${esc(nextLvl.t)} ←</a>` : ''}</div></div></div>`;
+    app.querySelector('[data-rerun]').onclick = (e) => { e.preventDefault(); quizPage(app, C, lvlId, idx); };
   };
   step();
 }

@@ -38,6 +38,14 @@ async function supabaseBackend() {
 
   sb.auth.onAuthStateChange(async (_e, session) => emit(await loadMe(session)));
 
+  // Supabase يعيد 1000 صف على الأكثر في الطلب الواحد: نجلب الكل صفحةً صفحة (سجل الصلوات وحده يتجاوز ذلك في سنة)
+  async function all(build) {
+    const out = [];
+    for (let from = 0; ; from += 1000) {
+      const rows = ok(await build().range(from, from + 999));
+      out.push(...rows); if (rows.length < 1000) return out;
+    }
+  }
   return {
     mode: 'supabase',
     async init() { const { data } = await sb.auth.getSession(); return loadMe(data.session); },
@@ -58,16 +66,32 @@ async function supabaseBackend() {
     async updateMe(patch) { ok(await sb.from('profiles').update(patch).eq('id', uid())); Object.assign(me, patch); emit(me); },
 
     // --- التعلّم ---
-    async progress(studentId = uid()) { return ok(await sb.from('progress').select('*').eq('student_id', studentId)); },
+    async progress(studentId = uid()) { return all(() => sb.from('progress').select('*').eq('student_id', studentId)); },
     async markDone(item_key, stage_id, kind) { ok(await sb.from('progress').upsert({ student_id: uid(), item_key, stage_id, kind })); },
     async unmark(item_key) { ok(await sb.from('progress').delete().eq('student_id', uid()).eq('item_key', item_key)); },
     async saveQuiz(stage_id, correct, total, details) {
       const score = Math.round((correct / total) * 100);
       ok(await sb.from('quiz_attempts').insert({ student_id: uid(), stage_id, score, correct, total, details })); return score;
     },
-    async quizzes(studentId = uid()) { return ok(await sb.from('quiz_attempts').select('*').eq('student_id', studentId).order('created_at')); },
+    async quizzes(studentId = uid()) { return all(() => sb.from('quiz_attempts').select('*').eq('student_id', studentId).order('created_at')); },
     async evaluations(studentId = uid()) { return ok(await sb.from('evaluations').select('*').eq('student_id', studentId).order('created_at')); },
-    async memo(studentId = uid()) { return ok(await sb.from('memorization').select('*').eq('student_id', studentId)); },
+    async memo(studentId = uid()) { return all(() => sb.from('memorization').select('*').eq('student_id', studentId)); },
+    // بيانات عدة طلاب دفعة واحدة (لوحة المشرف): 6 طلبات بدل 5×عدد الطلاب
+    async studentsData(ids) {
+      if (!ids.length) return {};
+      const by = (rows) => rows.reduce((m, r) => ((m[r.student_id] ||= []).push(r), m), {});
+      const [pr, qz, ev, mm, asg] = await Promise.all([
+        all(() => sb.from('progress').select('*').in('student_id', ids)),
+        all(() => sb.from('quiz_attempts').select('*').in('student_id', ids).order('created_at')),
+        all(() => sb.from('evaluations').select('*').in('student_id', ids).order('created_at')),
+        all(() => sb.from('memorization').select('*').in('student_id', ids)),
+        all(() => sb.from('assignments').select('*').in('student_id', ids).order('created_at', { ascending: false })),
+      ]);
+      const subs = asg.length ? await all(() => sb.from('submissions').select('*').in('assignment_id', asg.map((x) => x.id))) : [];
+      const A = asg.map((x) => ({ ...x, submission: subs.find((y) => y.assignment_id === x.id) || null }));
+      const P = by(pr), Q = by(qz), E = by(ev), M = by(mm), G = by(A);
+      return Object.fromEntries(ids.map((id) => [id, { progress: P[id] || [], quizzes: Q[id] || [], evals: E[id] || [], memo: M[id] || [], assignments: G[id] || [] }]));
+    },
     async setMemo(kind, ref, status) {
       ok(await sb.from('memorization').upsert({ student_id: uid(), kind, ref: String(ref), status, updated_at: new Date().toISOString() }));
     },
@@ -103,7 +127,8 @@ async function supabaseBackend() {
 
     // --- المحادثات ---
     async messages(student_id, supervisor_id) {
-      return ok(await sb.from('messages').select('*').eq('student_id', student_id).eq('supervisor_id', supervisor_id).order('created_at').limit(500));
+      // أحدث 500 رسالة (الترتيب التصاعدي مع limit كان يعيد أقدمها فتختفي الرسائل الجديدة بعد 500)
+      return ok(await sb.from('messages').select('*').eq('student_id', student_id).eq('supervisor_id', supervisor_id).order('created_at', { ascending: false }).limit(500)).reverse();
     },
     async sendMessage(student_id, supervisor_id, body) { ok(await sb.from('messages').insert({ student_id, supervisor_id, sender_id: uid(), body })); },
     async markRead(student_id, supervisor_id) { await sb.rpc('mark_read', { p_student: student_id, p_supervisor: supervisor_id }); },
@@ -212,6 +237,11 @@ function localBackend() {
     async quizzes(sid = uid()) { return db.quiz.filter((x) => x.student_id === sid); },
     async evaluations(sid = uid()) { return db.evals.filter((x) => x.student_id === sid); },
     async memo(sid = uid()) { return db.memo.filter((x) => x.student_id === sid); },
+    async studentsData(ids) {
+      const out = {};
+      for (const id of ids) out[id] = { progress: await this.progress(id), quizzes: await this.quizzes(id), evals: await this.evaluations(id), memo: await this.memo(id), assignments: await this.assignments(id) };
+      return out;
+    },
     async setMemo(kind, ref, status) {
       ref = String(ref);
       const m = db.memo.find((x) => x.student_id === uid() && x.kind === kind && x.ref === ref);

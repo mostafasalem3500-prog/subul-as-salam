@@ -15,7 +15,7 @@ export default async function learnCenter(app) {
   const chips = [['stages', '🧭', t('stages')], ['prayer', '💧', t('prayerWudu')], ['quran', '📖', t('quran')], ['hadith', '🌿', t('hadith')], ['videos', '🎬', t('videos')], ['books', '📚', t('booksGuide')]];
   app.innerHTML = `${pageHead('📖 ' + t('learnCenter'), `${t('openToAll')} · ${esc(L.ar)} · <span lang="${lang}">${esc(L.name)}</span>`)}
   <div class="wrap stack" style="padding-top:14px">
-    <div class="tabs">${chips.map(([id, ic, l]) => `<a class="btn sm" href="javascript:void 0" data-jump="${id}">${ic} ${l}</a>`).join('')}</div>
+    <div class="tabs">${chips.map(([id, ic, l]) => `<button type="button" class="btn sm" data-jump="${id}">${ic} ${l}</button>`).join('')}</div>
 
     <section class="stack" id="sec-stages"><h2>🧭 ${t('stages')}</h2>${journeyHTML(null)}</section>
 

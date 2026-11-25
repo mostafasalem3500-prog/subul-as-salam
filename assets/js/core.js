@@ -40,6 +40,21 @@ export function applyUi(l) {
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// مفتاح تخزين خاص بكل مستخدم: جهاز المسجد أو الأسرة المشترك لا يخلط تقدّم طالب بآخر
+export const userKey = (k) => (S.me?.id ? `${k}:${S.me.id}` : k);
+// عند الدخول: ننقل ما حُفظ قبل الدخول (مفاتيح بلا معرّف) إلى مفاتيح هذا المستخدم مرة واحدة،
+// ثم نحذف الأصل حتى لا يرثه مستخدم آخر على الجهاز نفسه
+export function migrateUserKeys() {
+  if (!S.me?.id) return;
+  const base = /^subul-(tracks|langprog|tour|saved-\w+|srs-\w+)$/;
+  const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (base.test(k)) ks.push(k); }
+  for (const k of ks) {
+    if (localStorage.getItem(`${k}:${S.me.id}`) === null) localStorage.setItem(`${k}:${S.me.id}`, localStorage.getItem(k));
+    localStorage.removeItem(k);
+  }
+}
+// رابط خارجي آمن: http/https فقط (يمنع javascript: وdata: من بيانات المصادر الخارجية)
+export const safeUrl = (u) => { try { const x = new URL(String(u || ''), location.href); return /^https?:$/.test(x.protocol) ? x.href : '#'; } catch { return '#'; } };
 export const html = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (i < vals.length ? (Array.isArray(vals[i]) ? vals[i].join('') : vals[i] ?? '') : ''), '');
 
 export function toast(msg, ms = 2600) {

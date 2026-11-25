@@ -1,7 +1,7 @@
 // نافذة الطالب: لوحة الرحلة، المحطة، المادة، الاختبار
 import { CONFIG } from '../config.js';
 import { IH, HE, QE, ihTypeIcon, attachmentKind, ytEmbed } from '../api.js';
-import { S, esc, toast, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
+import { S, esc, safeUrl, toast, computeProgress, loadStudentData, rafiq, loading } from '../core.js';
 import { buildQuestions, runQuiz, resultHTML } from './quizengine.js';
 import { STAGES, EXTRA, surahName, allStageSurahs } from '../curriculum.js';
 import { t, stageTitle, stageDescAr } from '../i18n.js';
@@ -140,10 +140,10 @@ export async function item(app, id) {
   app.innerHTML = `
   ${pageHead(`<span lang="${lang}" translate="no">${ihTypeIcon(it.type)} ${esc(it.title)}</span>`, by)}
   <div class="wrap stack" style="padding-top:20px" dir="${qLangDir(lang)}">
-    ${it.image ? `<img src="${esc(it.image)}" alt="" style="max-height:260px;border-radius:12px;object-fit:contain">` : ''}
+    ${it.image ? `<img src="${esc(safeUrl(it.image))}" alt="" style="max-height:260px;border-radius:12px;object-fit:contain">` : ''}
     ${it.description ? `<div class="card" lang="${lang}" translate="no">${esc(it.description)}</div>` : ''}
     <div class="stack">${att.map((a) => {
-      const k = attachmentKind(a), u = esc(a.url);
+      const k = attachmentKind(a), u = esc(safeUrl(a.url));
       if (k === 'audio') return `<div class="attach"><span>🎧 ${esc(a.description || '')} <span class="tiny muted">${esc(a.size || '')}</span></span><audio controls preload="none" src="${u}"></audio></div>`;
       if (k === 'video') return `<div class="attach"><video controls preload="metadata" playsinline src="${u}"></video></div>`;
       if (k === 'youtube') return `<div class="attach vid-card"><iframe src="${esc(ytEmbed(a.url))}" title="YouTube" loading="lazy" allowfullscreen allow="encrypted-media; picture-in-picture"></iframe></div>`;

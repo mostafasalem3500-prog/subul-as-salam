@@ -4,7 +4,7 @@
 // =====================================================================
 import { CONFIG } from '../config.js';
 import { IH, ihTypeIcon, attachmentKind, ytId, ytEmbed } from '../api.js';
-import { S, esc, toast, loading, reveal, isSup, href, computeProgress, loadStudentData, rafiq } from '../core.js';
+import { S, userKey, esc, toast, loading, reveal, isSup, href, computeProgress, loadStudentData, rafiq } from '../core.js';
 import { EXTRA, STAGES } from '../curriculum.js';
 import { t, stageTitle } from '../i18n.js';
 import { TRACKS, trackName } from '../tracks.js';
@@ -220,7 +220,7 @@ export async function saudi(app) {
   app.innerHTML = `${pageHead('🕋 <span lang="ar">المصادر السعودية المعتمدة</span>', `Saudi official sources · IslamHouse.com · ${esc(L().name)}`, `<a class="btn" href="${href('books')}">📚 ${t('booksGuide')} ←</a>`)}
   <div class="wrap stack" style="padding-top:16px">
     <p class="notice small" lang="ar" dir="rtl">هذه المواد صادرة عن جهات رسمية سعودية أو لعلماء من هيئاتها، كما هي مسجّلة في بيانات المصدر والناشر في IslamHouse. العنوان والملف يُعرضان من المصدر دون تعديل.</p>
-    <div class="tabs">${groups.map((g) => `<a class="btn sm" href="javascript:void 0" data-jump="${g.id}">${g.icon} ${G[g.id].length}</a>`).join('')}</div>
+    <div class="tabs">${groups.map((g) => `<button type="button" class="btn sm" data-jump="${g.id}">${g.icon} ${G[g.id].length}</button>`).join('')}</div>
     ${groups.map((g) => `<section class="stack" id="sg-${g.id}">
       <div class="sec-head"><div><span class="kicker" dir="ltr">${esc(g.en)}</span><h2 lang="ar" dir="rtl" style="font-size:1.15rem">${g.icon} ${esc(g.ar)} <span class="chip">${G[g.id].length}</span></h2></div>
         ${g.url ? `<a class="btn sm" href="${g.url}" target="_blank" rel="noopener">${esc(g.url.replace('https://', ''))} ↗</a>` : ''}</div>
@@ -232,8 +232,8 @@ export async function saudi(app) {
 }
 
 // ---------------------------------------------------------------- المسارات الموضوعية
-const TRK = 'subul-tracks';
-const trkGet = () => { try { return new Set(JSON.parse(localStorage.getItem(TRK)) || []); } catch { return new Set(); } };
+const TRK = () => userKey('subul-tracks');
+const trkGet = () => { try { return new Set(JSON.parse(localStorage.getItem(TRK())) || []); } catch { return new Set(); } };
 export async function tracks(app, tid) {
   const lang = S.lang, ui = getUiLang();
   let done = trkGet();
@@ -265,7 +265,7 @@ export async function tracks(app, tid) {
     const k = b.dataset.k, set = trkGet(), on = !done.has(k);
     if (on) { set.add(k); done.add(k); if (S.me?.role === 'student') await S.db.markDone(k, 'track', 'track').catch(() => {}); }
     else { set.delete(k); done.delete(k); if (S.me?.role === 'student') await S.db.unmark?.(k).catch(() => {}); }
-    localStorage.setItem(TRK, JSON.stringify([...set]));
+    localStorage.setItem(TRK(), JSON.stringify([...set]));
     tracks(app, tid);
   });
 }
