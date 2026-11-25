@@ -5,7 +5,7 @@
 import { CONFIG } from '../config.js';
 import { S, esc, toast, ago, fmtDate, computeProgress, loadStudentData, loading, reveal, isSup, timeShort, linkify, confetti, href } from '../core.js';
 import { STAGES, surahName, surahAyat } from '../curriculum.js';
-import { t, stageTitle } from '../i18n.js';
+import { t, stageTitle, getUiLang } from '../i18n.js';
 import { needLogin, journeyHTML, drawJourney, verseCard } from './components.js';
 import { HE } from '../api.js';
 import { videoCard, wireVideos, prayerTrackerHTML, wirePrayerTracker, prayerHeatHTML, todayKey, isoWeek, monthKey } from './extra.js';
@@ -373,6 +373,7 @@ const dayIndex = () => Math.floor(Date.now() / 864e5);
 // ---------------------------------------------------------------- اليوم: الدرس اليومي
 async function todayTab(body, ctx) {
   const { P, D, viewer, student } = ctx;
+  if (viewer === 'student') setTimeout(welcomeTour, 600);
   const lang = student.lang || CONFIG.defaultLang;
   const cur = P.stages[P.current], st = cur.stage;
   const di = dayIndex(), today = todayKey();
@@ -441,4 +442,26 @@ function reviewsTab(body, ctx) {
     <div class="card stack"><h3>📈 ${t('result')}</h3>
       ${hist.length ? `<div class="dist" style="height:120px">${hist.slice(0, 12).reverse().map((q) => `<div class="col" title="${esc(q.stage_id)}: ${q.score}%"><span>${q.score}</span><i style="height:${q.score}%"></i><span>${q.stage_id.startsWith('w') ? 'W' + q.stage_id.slice(-2) : 'M' + q.stage_id.slice(-2)}</span></div>`).join('')}</div>`
         : `<p class="muted small">—</p>`}</div>`;
+}
+
+// ---------------------------------------------------------------- جولة الترحيب (أول مرة فقط)
+const TOUR = {
+  ar: [['🌱', 'أهلًا بك في سُبُل السلام', 'رحلتك من الشهادتين خطوة خطوة، بكتب وآيات وأحاديث من مصادرها المعتمدة.'], ['☀️', 'درس كل يوم', 'في «اليوم» تجد قراءة قصيرة وآيات وحديثًا ومتابعة صلواتك.'], ['🧠', 'احفظ القرآن', 'لوحة الحفظ ترسم لك جزء عمّ سورة سورة، واختبر حفظك بـ«أكمل الآية».'], ['💬', 'مشرفك معك', 'اضغط «اسأل» في أي صفحة ليصل سؤالك إلى مشرفك مع رابطها.']],
+  en: [['🌱', 'Welcome to Subul as-Salam', 'Your journey from the Shahada, step by step, with books, verses and hadiths from approved sources.'], ['☀️', 'A lesson every day', 'In “Today” you find a short reading, verses, a hadith and your prayer tracker.'], ['🧠', 'Memorize the Quran', 'The memorization board maps Juz ʿAmma surah by surah — test yourself with “complete the verse”.'], ['💬', 'Your supervisor is with you', 'Press “Chat” on any page to send your question with its link.']],
+  es: [['🌱', 'Bienvenido a Subul as-Salam', 'Tu camino desde la Shahada, paso a paso, con libros, aleyas y hadices de fuentes aprobadas.'], ['☀️', 'Una lección cada día', 'En «Hoy» encuentras una lectura breve, aleyas, un hadiz y tus oraciones.'], ['🧠', 'Memoriza el Corán', 'El tablero de memorización muestra el Yuz ʿAmma sura por sura; ponte a prueba completando la aleya.'], ['💬', 'Tu supervisor te acompaña', 'Pulsa el botón de chat en cualquier página para enviar tu pregunta con su enlace.']],
+  sw: [['🌱', 'Karibu Subul as-Salam', 'Safari yako tangu Shahada, hatua kwa hatua, kwa vitabu, aya na hadithi kutoka vyanzo vilivyoidhinishwa.'], ['☀️', 'Somo kila siku', 'Katika «Leo» utapata somo fupi, aya, hadithi na swala zako.'], ['🧠', 'Hifadhi Qur-ani', 'Ubao wa kuhifadhi unaonyesha Juzuu Amma sura kwa sura; jipime kwa «kamilisha aya».'], ['💬', 'Msimamizi wako yuko nawe', 'Bonyeza kitufe cha mazungumzo kwenye ukurasa wowote kutuma swali lako pamoja na kiungo chake.']],
+};
+function welcomeTour() {
+  if (localStorage.getItem('subul-tour') || document.querySelector('.tour')) return;
+  const steps = TOUR[getUiLang()] || TOUR.en; let i = 0;
+  const d = document.createElement('dialog'); d.className = 'tour'; document.body.append(d);
+  const draw = () => {
+    const [ic, h, p] = steps[i];
+    d.innerHTML = `<div class="card stack"><div class="big">${ic}</div><h2 dir="auto">${esc(h)}</h2><p dir="auto" class="muted">${esc(p)}</p>
+      <div class="dots">${steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="row" style="justify-content:center"><button class="btn" id="tx">✕</button><button class="btn primary" id="tn">${i < steps.length - 1 ? '→' : '✓'}</button></div></div>`;
+    d.querySelector('#tx').onclick = close; d.querySelector('#tn').onclick = () => { if (++i >= steps.length) close(); else draw(); };
+  };
+  const close = () => { localStorage.setItem('subul-tour', '1'); d.close(); d.remove(); };
+  draw(); d.showModal();
 }

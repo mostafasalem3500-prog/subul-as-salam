@@ -100,6 +100,10 @@ function renderNav() {
         <span${getUiLang() === 'ar' ? ' class="on"' : ''}>عربي</span><span${getUiLang() === L ? ' class="on"' : ''}>${esc(CONFIG.languages[L].name)}</span></button>`
        : '');
   $('#ui-toggle')?.addEventListener('click', () => { applyUi(uiPref() === 'ar' ? L : 'ar'); render(); });
+  // حجم الخط: 100% ← 115% ← 130% (لكبار السن وضعاف البصر)
+  const FS = [1, 1.15, 1.3], fi = Math.max(0, FS.indexOf(+localStorage.getItem('subul-fs') || 1));
+  $('#ui-slot').insertAdjacentHTML('beforeend', `<button class="fs-btn" id="fs" aria-label="text size" title="A / A+ / A++">A${'+'.repeat(fi)}</button>`);
+  $('#fs').onclick = () => { const n = FS[(fi + 1) % FS.length]; localStorage.setItem('subul-fs', n); document.documentElement.style.setProperty('--fs', n); renderNav(); };
   // الشعار يعيد إلى الصفحة الرئيسية للغة أو إلى اختيار اللغات
   $('.brand').setAttribute('href', L ? href() : '#/');
   $('#brand-lang').textContent = L ? CONFIG.languages[L].name.toUpperCase() : 'SUBUL AS-SALAM';
@@ -184,6 +188,7 @@ async function processJoin() {
 }
 
 async function boot() {
+  document.documentElement.style.setProperty('--fs', +localStorage.getItem('subul-fs') || 1);
   S.db = await createDB();
   S.me = await S.db.init();
   if (S.db.mode === 'local') $('#demo-bar').classList.remove('hidden');

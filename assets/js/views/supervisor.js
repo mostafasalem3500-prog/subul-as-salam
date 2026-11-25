@@ -68,6 +68,9 @@ export async function dashboard(app) {
         ${sent.length ? `<p class="small">${t('waiting')}: ${sent.map((l) => `<span class="chip gold">${esc(l.other.full_name || l.other.email || '')}</span>`).join(' ')}</p>` : ''}
       </div>
     </div>
+    ${n ? `<details class="card stack bc"><summary><b lang="ar">📣 رسالة واحدة لكل طلابي (${n})</b></summary>
+      <p class="tiny muted" lang="ar">تصل كل طالب في محادثته الخاصة معك. اكتبها بلغة طلابك (${esc(CONFIG.languages[LG].name)}) — مثلًا تذكير بدرس الأسبوع أو تهنئة برمضان. ولا تكتب ترجمة آية أو حديث من عندك؛ انسخها من صفحتها في الموقع.</p>
+      <textarea id="bc-t" rows="3" dir="auto"></textarea><button class="btn primary" id="bc-s">📣 ${t('send')}</button></details>` : ''}
     <div class="row between"><h2>${t('students')}</h2><span class="row"><a class="btn sm" href="#/supervisor/questions">❓ ${t('questions')}</a><button class="btn sm" id="csv">⬇ CSV</button></span></div>
     ${n ? `<div class="table-wrap"><table><thead><tr><th>${t('name')}</th><th>${t('yourLang')}</th><th>${t('currentStage')}</th><th>${t('progress')}</th><th>${t('avgScore')}</th><th>${t('memoSurahs')}</th><th>${t('lastActivity')}</th></tr></thead><tbody>
       ${rows.map(({ s, P }) => `<tr class="click" data-id="${esc(s.id)}"><td><b>${esc(s.full_name || s.email)}</b>${unreadOf(s.id) ? ` <span class="chip red tiny">💬 ${unreadOf(s.id)}</span>` : ''}<br><span class="tiny muted" dir="ltr">${esc(s.email)}</span>${s.country ? ` <span class="tiny muted">· ${esc(s.country)}</span>` : ''}</td>
@@ -87,6 +90,12 @@ export async function dashboard(app) {
   };
   app.querySelectorAll('[data-acc],[data-dec]').forEach((b) => b.onclick = async () => { await S.db.respondLink(b.dataset.acc || b.dataset.dec, !!b.dataset.acc); toast('✓'); dashboard(app); });
   app.querySelector('#cp')?.addEventListener('click', () => { navigator.clipboard?.writeText(invite); app.querySelector('#inv').select(); toast(t('copied')); });
+  app.querySelector('#bc-s')?.addEventListener('click', async () => {
+    const txt = app.querySelector('#bc-t').value.trim(); if (!txt) return;
+    const b = app.querySelector('#bc-s'); b.disabled = true;
+    let ok = 0; for (const { s } of rows) { try { await S.db.sendMessage(s.id, S.me.id, `📣 ${txt}`); ok++; } catch {} }
+    toast(`📣 ${ok}/${rows.length} ✓`); app.querySelector('#bc-t').value = ''; b.disabled = false;
+  });
   app.querySelector('#csv').onclick = () => {
     const head = ['name', 'email', 'lang', 'country', 'current_stage', 'progress_pct', 'avg_score', 'surahs', 'last_activity',
                   ...STAGES.map((s, i) => `stage${i + 1}_pct`), ...STAGES.map((s, i) => `stage${i + 1}_grade`)];
