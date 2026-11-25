@@ -551,3 +551,8 @@ body[dir="ltr"] .page-head p[dir="auto"] { text-align: start; }
 .attn-row.p2 { border-inline-start: 4px solid var(--sky); } .attn-row.p3 { border-inline-start: 4px solid var(--line); }
 @media print { .ask-fab { display: none !important; } }
 body:has(#ask-fab) #app { padding-bottom: 84px; }
+.save-fab { position: fixed; bottom: 18px; inset-inline-start: 18px; z-index: 50; width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--gold-2);
+  background: var(--surface); color: var(--gold); font-size: 1.6rem; cursor: pointer; box-shadow: var(--shadow-lg); transition: transform .25s var(--ease); }
+.save-fab.on { background: var(--gold-2); color: #fff; transform: rotate(-12deg) scale(1.05); }
+body:has(#save-fab) #app { padding-bottom: 84px; }
+@media print { .save-fab { display: none !important; } }

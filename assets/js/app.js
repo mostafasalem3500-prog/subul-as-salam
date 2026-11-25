@@ -22,6 +22,7 @@ import * as sp from './views/studentpage.js';
 import * as extra from './views/extra.js';
 import * as lc from './views/langcourse.js';
 import * as hifz from './views/hifz.js';
+import * as srch from './views/search.js';
 import sources from './views/sources.js';
 
 // مسارات خارج الأقسام
@@ -49,6 +50,8 @@ const SCOPED = [
   [/^saudi$/, extra.saudi],
   [/^tracks(?:\/(\w+))?$/, extra.tracks],
   [/^hifz(?:\/(test))?$/, hifz.route],
+  [/^search$/, srch.search],
+  [/^saved$/, srch.saved],
   [/^quran$/, quran.list],
   [/^quran\/(\d+)$/, quran.reader],
   [/^hadith$/, hadith.categories],
@@ -88,6 +91,7 @@ function renderNav() {
     links = [[href(), '🏠'], [href('learn'), t('learnCenter')], [href('quran'), t('quran')], [href('hadith'), t('hadith')], [href('prayer'), t('prayerWudu')], [href('lang'), '🗣️ ' + t('langLearn')],
              [href('login'), t('login')], [href('signup'), t('signup')]];
   }
+  if (L) links.push([href('search'), '🔍'], [href('saved'), '⭐']);
   if (me && L) links.push([href('profile'), '👤 ' + esc(me.full_name || me.email.split('@')[0])]);
   const cur = location.hash || '#/';
   const best = links.map(([h]) => h).filter((h) => cur === h || cur.startsWith(h + '/')).sort((a, b) => b.length - a.length)[0];
@@ -205,7 +209,14 @@ boot().catch((e) => { console.error(e); toast('Error: ' + e.message); });
 // ---------------------------------------------------------------- «اسأل مشرفك» من أي مادة أو آية أو حديث
 const ASK_ON = /^(item|hadith|quran|stage|tracks|hifz|prayer|lang)\b/;
 function askButton(path) {
-  document.querySelector('#ask-fab')?.remove();
+  document.querySelector('#ask-fab')?.remove(); document.querySelector('#save-fab')?.remove();
+  if (S.routeLang && /^(item|hadith|quran\/|stage|tracks\/|lang\/L)/.test(path || '')) {
+    const sb = document.createElement('button'); sb.id = 'save-fab'; sb.className = 'save-fab';
+    const paint = () => { const on = srch.isSaved(location.hash); sb.textContent = on ? '★' : '☆'; sb.classList.toggle('on', on); sb.setAttribute('aria-pressed', on); };
+    sb.title = '⭐'; paint();
+    sb.onclick = () => { const title = (document.querySelector('.page-head h1')?.textContent || document.title).trim(); const on = srch.toggleSaved(location.hash, title); paint(); toast(on ? '⭐ ✓' : '✕'); };
+    document.body.append(sb);
+  }
   if (S.me?.role !== 'student' || !ASK_ON.test(path || '')) return;
   const b = document.createElement('button');
   b.id = 'ask-fab'; b.className = 'ask-fab'; b.innerHTML = `💬 <span>${esc(t('chat'))}</span>`; b.title = 'اسأل مشرفك عن هذه الصفحة';
