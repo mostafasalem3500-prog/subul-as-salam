@@ -158,6 +158,7 @@ export async function render() {
       if (id !== renderId) return;
       if (typeof out === 'string') app.innerHTML = out;
       scopeLinks(app); scopeLinks($('#foot'));
+      askButton(path);
     } catch (e) {
       console.error(e);
       if (id === renderId) app.innerHTML = `<div class="wrap" style="padding-top:30px"><div class="card"><p>${t('error')}</p><p class="tiny muted">${esc(e.message || e)}</p><button class="btn" onclick="location.reload()">${t('retry')}</button></div></div>`;
@@ -200,3 +201,32 @@ async function boot() {
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 boot().catch((e) => { console.error(e); toast('Error: ' + e.message); });
+
+// ---------------------------------------------------------------- «اسأل مشرفك» من أي مادة أو آية أو حديث
+const ASK_ON = /^(item|hadith|quran|stage|tracks|hifz|prayer|lang)\b/;
+function askButton(path) {
+  document.querySelector('#ask-fab')?.remove();
+  if (S.me?.role !== 'student' || !ASK_ON.test(path || '')) return;
+  const b = document.createElement('button');
+  b.id = 'ask-fab'; b.className = 'ask-fab'; b.innerHTML = `💬 <span>${esc(t('chat'))}</span>`; b.title = 'اسأل مشرفك عن هذه الصفحة';
+  b.onclick = async () => {
+    const links = await S.db.links().catch(() => []);
+    const sup = links.find((l) => l.iAm === 'student' && l.status === 'active');
+    if (!sup) { toast(t('noSupervisor'), 5000); location.hash = href('me/tests'); return; }
+    const ctxTitle = (document.querySelector('.page-head h1')?.textContent || document.title).trim().slice(0, 120);
+    const d = document.createElement('dialog'); d.className = 'ask-dlg';
+    d.innerHTML = `<form method="dialog" class="card stack"><h3>💬 ${esc(sup.other.full_name || t('supervisor'))}</h3>
+      <p class="small muted" dir="auto">📎 ${esc(ctxTitle)}</p>
+      <textarea id="ask-t" rows="4" required dir="auto"></textarea>
+      <div class="row"><button class="btn primary" value="send">${esc(t('send'))}</button><button class="btn" value="cancel" formnovalidate>${esc(t('back'))}</button></div></form>`;
+    document.body.append(d); d.showModal(); d.querySelector('#ask-t').focus();
+    d.addEventListener('close', async () => {
+      const txt = d.querySelector('#ask-t').value.trim();
+      if (d.returnValue === 'send' && txt) {
+        try { await S.db.sendMessage(S.me.id, sup.other.id, `${txt}\n\n📎 ${ctxTitle}\n${location.href}`); toast('✓ ' + t('send')); } catch (e) { toast(e.message); }
+      }
+      d.remove();
+    });
+  };
+  document.body.append(b);
+}

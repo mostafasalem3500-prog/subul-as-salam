@@ -30,7 +30,7 @@ export async function dashboard(app) {
   const sent = links.filter((l) => l.status === 'pending' && !l.waitingForMe);
   const unreadOf = (id) => unread.filter((m) => m.student_id === id).length;
   const invite = S.me.supervisor_code ? `${location.origin}${location.pathname}#/${LG}/join/${S.me.supervisor_code}` : '';
-  const rows = await Promise.all(students.map(async (s) => ({ s, P: computeProgress(s.lang || CONFIG.defaultLang, await loadStudentData(s.id)) })));
+  const rows = await Promise.all(students.map(async (s) => { const D = await loadStudentData(s.id); return { s, D, P: computeProgress(s.lang || CONFIG.defaultLang, D) }; }));
   rows.sort((a, b) => new Date(b.s.last_activity || 0) - new Date(a.s.last_activity || 0));
   const n = rows.length;
   const avgProg = n ? Math.round(rows.reduce((a, r) => a + r.P.overall, 0) / n) : 0;
@@ -53,6 +53,7 @@ export async function dashboard(app) {
       <div class="stat"><b>${avgScore}</b><span>${t('avgScore')}</span></div>
       <div class="stat"><b>${active}</b><span lang="ar">نشِطون آخر 7 أيام</span></div>
     </div>
+    ${attentionHTML(rows, unreadOf, LG)}
     ${reqs.length ? `<div class="card stack" style="border:2px solid var(--gold-2)"><h3>🔔 ${t('requests')} (${reqs.length})</h3>
       ${reqs.map((l) => `<div class="row between"><span><b>${esc(l.other.full_name || '')}</b> <span class="tiny muted" dir="ltr">${esc(l.other.email || '')}</span> ${langChip(l.other.lang)} ${esc(l.other.country || '')}</span>
         <span class="row"><button class="btn sm primary" data-acc="${l.other.id}">${t('accept')}</button><button class="btn sm" data-dec="${l.other.id}">${t('decline')}</button></span></div>`).join('')}</div>` : ''}
@@ -313,4 +314,28 @@ async function renderCard(cv, { ar, tr, ref, src, theme, dir, quran }) {
   // المرجع والمصدر
   c.fillStyle = T.ac; c.direction = 'rtl'; c.font = '700 30px "Cairo"'; c.fillText(ref, W / 2, H - 150);
   c.fillStyle = T.tr; c.direction = 'ltr'; c.font = '24px "Plus Jakarta Sans"'; c.fillText(src, W / 2, H - 105);
+}
+
+// ---------------------------------------------------------------- «يحتاج انتباهك»: قائمة عمل المشرف اليوم
+function attentionHTML(rows, unreadOf, LG) {
+  const DAY = 864e5, now = Date.now();
+  const items = [];
+  rows.forEach(({ s, D, P }) => {
+    const name = esc(s.full_name || s.email), go = `#/${LG}/supervisor/student/${esc(s.id)}`;
+    const u = unreadOf(s.id);
+    if (u) items.push([0, '💬', `${name}: ${u} رسالة لم تُقرأ`, go + '/chat']);
+    const pend = (D.memo || []).filter((m) => m.status === 'memorized');
+    if (pend.length) items.push([1, '🧠', `${name}: ${pend.length} حفظ ينتظر التسميع والتوثيق`, go + '/follow']);
+    const subs = (D.assignments || []).filter((a) => a.submission && a.submission.score == null);
+    if (subs.length) items.push([1, '📝', `${name}: ${subs.length} اختبار سلّمه ينتظر التصحيح`, go + '/tests']);
+    const cur = P.stages[P.current];
+    if (!P.allDone && cur.pct === 100 && !cur.eval) items.push([2, '🎓', `${name}: أنهى مهام المحطة ${P.current + 1} وينتظر تقييمك`, go + '/follow']);
+    const last = s.last_activity ? new Date(s.last_activity).getTime() : 0;
+    if (!last || now - last > 7 * DAY) items.push([3, '⏳', `${name}: ${last ? `لم ينشط منذ ${Math.floor((now - last) / DAY)} يومًا` : 'لم يبدأ بعد'} — أرسل له تشجيعًا`, go + '/chat']);
+  });
+  if (!rows.length) return '';
+  items.sort((a, b) => a[0] - b[0]);
+  return `<div class="card stack attn" lang="ar" dir="rtl"><div class="row between"><h3>📌 يحتاج انتباهك اليوم</h3><span class="chip ${items.length ? 'red' : 'ok'}">${items.length || '✓'}</span></div>
+    ${items.length ? items.slice(0, 12).map(([p, ic, txt, h]) => `<a class="attn-row p${p}" href="${h}"><span class="ic">${ic}</span><span class="grow">${txt}</span><span>←</span></a>`).join('')
+      : '<p class="muted small">لا شيء معلّق — طلابك في أحسن حال، بارك الله فيك.</p>'}</div>`;
 }
